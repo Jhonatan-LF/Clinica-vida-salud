@@ -1,0 +1,20 @@
+# Configuración local de cada PC (contiene la contraseña real de PostgreSQL)
+backend/config/config.local.php
+.env
+
+# Registros de errores
+backend/storage/logs/*.log
+
+# Resultados generados por las pruebas
+backend/tests/resultados_*
+basededato/sql/pruebas/resultados_*
+
+# Editor y sistema operativo
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Paquetes de entrega
+*.zip

@@ -1,0 +1,37 @@
+# =====================================================================
+#  Clínica Vida Salud · Apache (XAMPP)
+#  http://localhost/clinica-vida-salud
+#
+#  Requiere en C:\xampp\apache\conf\httpd.conf:
+#    LoadModule rewrite_module modules/mod_rewrite.so   (sin el #)
+#    <Directory "C:/xampp/htdocs"> ... AllowOverride All ... </Directory>
+# =====================================================================
+
+Options -Indexes
+DirectoryIndex disabled
+
+AddType font/woff2 .woff2
+AddType image/svg+xml .svg
+AddDefaultCharset UTF-8
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "same-origin"
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1. Carpetas internas: nunca se abren desde el navegador (código, configuración,
+    #    registros, pruebas, scripts SQL y plantillas).
+    RewriteRule ^(backend/(app|config|storage|tests)|basededato|frontend/vistas)(/.*)?$ - [F,L]
+    # Archivos ocultos (.git, .env, .htaccess…)
+    RewriteRule (^|/)\. - [F,L]
+
+    # 2. Recursos estáticos: /assets/* -> frontend/assets/*
+    RewriteRule ^assets/(.*)$ frontend/assets/$1 [END]
+
+    # 3. Todo lo demás pasa por el controlador frontal.
+    RewriteRule ^ backend/public/index.php [END,QSA]
+</IfModule>
