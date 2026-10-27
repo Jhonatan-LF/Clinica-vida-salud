@@ -16,11 +16,14 @@ final class Sesion
             return;
         }
         session_name(Aplicacion::config('sesion.nombre', 'VIDASALUD_SESION'));
+        $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
         session_set_cookie_params([
             'lifetime' => 0,
             'path'     => Peticion::base() ?: '/',
             'httponly' => true,
-            'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'secure'   => $esHttps,
             'samesite' => 'Lax',
         ]);
         ini_set('session.use_strict_mode', '1');
