@@ -25,6 +25,7 @@ $grupos = [
     ],
     'Administración' => [
         ['Reportes', '/reportes', 'reporte', 'reportes.ver', ['/reportes']],
+        ['Estadísticas', '/estadisticas', 'pulso', 'reportes.ver', ['/estadisticas']],
         ['Usuarios', '/usuarios', 'usuarios', 'usuarios.gestionar', ['/usuarios']],
         ['Roles y permisos', '/permisos', 'escudo', 'usuarios.gestionar', ['/permisos']],
         ['Bitácora', '/bitacora', 'bitacora', 'bitacora.ver', ['/bitacora']],
