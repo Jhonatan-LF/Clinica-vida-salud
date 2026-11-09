@@ -996,3 +996,189 @@ fieldset.grupo > legend {
     background: color-mix(in srgb, currentColor 14%, transparent);
 }
 .esp-icono .ico { width: 20px; height: 20px; max-width: none; }
+
+/* ---------------------------------------------------------------------
+   CU17 · Panel de estadísticas
+   Colores de las series = colores de estado de la cita (mismo significado
+   en todo el sistema). Orden de la pila validado para daltonismo; las
+   canceladas (gris) llevan además textura rayada.
+   --------------------------------------------------------------------- */
+.est-filtros { justify-content: space-between; align-items: center; }
+.est-periodos { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+.est-atendidas     { --c: var(--verde); }
+.est-pendientes    { --c: var(--azul); }
+.est-inasistencias { --c: var(--naranja); }
+.est-canceladas    { --c: var(--gris); }
+.est-total         { --c: var(--primario); }
+.est-inasistencias-linea { --c: var(--naranja); }
+
+.est-leyenda { display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; margin: 0 0 .75rem; padding: 0; list-style: none; font-size: .84rem; color: var(--texto-suave); }
+.est-leyenda li { display: inline-flex; align-items: center; gap: .4rem; }
+.est-muestra { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--c); }
+.est-muestra.est-canceladas, .est-pila .est-canceladas {
+    background: repeating-linear-gradient(45deg, var(--gris) 0 3px, #a9b1af 3px 6px);
+}
+
+/* Área de trazado: guías horizontales + bandas (una por mes) */
+.est-grafico { --alto: 220px; }
+.est-area { position: relative; height: var(--alto); margin-left: 2.6rem; margin-top: 1.4rem; }
+.est-guia { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--borde); }
+.est-guia span {
+    position: absolute; right: calc(100% + .5rem); top: 0; transform: translateY(-50%);
+    font-size: .72rem; color: var(--texto-tenue); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.est-bandas { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+.est-banda {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    height: 100%; cursor: default; outline: none; border-radius: 6px;
+}
+.est-banda:focus-visible { box-shadow: var(--foco); }
+.est-banda.activa, .est-banda:hover { background: color-mix(in srgb, var(--primario) 5%, transparent); }
+
+/* Columnas apiladas: 24 px máximo, 2 px de separación, extremo superior redondeado */
+.est-pila {
+    display: flex; flex-direction: column-reverse; gap: 2px;
+    width: min(24px, 64%); border-radius: 4px 4px 0 0; overflow: hidden;
+}
+.est-pila > span { display: block; min-height: 2px; background: var(--c); }
+.est-banda.activa .est-pila, .est-banda:hover .est-pila { filter: brightness(1.08); }
+.est-cap { margin-bottom: 4px; font-size: .74rem; font-weight: 600; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+
+.est-ejex { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); margin-left: 2.6rem; padding-top: .4rem; }
+.est-ejex span { text-align: center; font-size: .7rem; color: var(--texto-tenue); white-space: nowrap; overflow: visible; }
+.est-ejex-alterno span:nth-child(even) { visibility: hidden; }   /* gráfico angosto con muchas semanas */
+
+/* Línea (tasa de inasistencia): trazo de 2 px, relleno al 10 %, puntos de 8 px con anillo */
+.est-area-linea { --c: var(--naranja); }
+.est-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.est-trazo { fill: none; stroke: var(--c); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.est-relleno { fill: var(--c); opacity: .1; }
+.est-punto {
+    position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%;
+    background: var(--c); box-shadow: 0 0 0 2px var(--superficie); pointer-events: none;
+}
+.est-etiqueta-fin {
+    position: absolute; transform: translate(-50%, calc(-100% - 8px)); pointer-events: none;
+    font-size: .78rem; font-weight: 700; color: var(--texto); white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.est-bandas-cruz .est-banda.activa, .est-bandas-cruz .est-banda:hover { background: none; }
+.est-bandas-cruz .est-banda.activa::after, .est-bandas-cruz .est-banda:hover::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 1px solid var(--texto-tenue);
+}
+
+/* Barras horizontales (especialidades): 14 px, extremo redondeado, valor en la punta */
+.est-barras-h { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+.est-barras-h li {
+    display: grid; grid-template-columns: minmax(110px, 38%) minmax(0, 1fr); align-items: center; gap: .75rem;
+    padding: .2rem .3rem; border-radius: 6px; font-size: .86rem; outline: none;
+}
+.est-barras-h li:focus-visible { box-shadow: var(--foco); }
+.est-barras-h li.activa, .est-barras-h li:hover { background: color-mix(in srgb, var(--primario) 5%, transparent); }
+.est-barra-nombre { min-width: 0; overflow-wrap: anywhere; }
+.est-barra-pista { display: flex; align-items: center; gap: .45rem; min-width: 0; }
+.est-barra { display: block; height: 14px; border-radius: 0 4px 4px 0; background: var(--primario); flex: none;
+             width: calc((100% - 5.2rem) * var(--p, 0)); }   /* proporcional al espacio que deja la etiqueta */
+.est-barra-valor { font-size: .8rem; font-weight: 600; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+
+/* Medidor de inasistencia por médico: escala común (0 → la tasa más alta) y marca del promedio */
+.est-medidor { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .35rem .6rem; min-width: 150px; }
+.est-medidor-pista { position: relative; display: block; flex: none; width: 110px; height: 8px; border-radius: 999px; background: var(--naranja-fondo); }
+.est-medidor-relleno { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--naranja) 55%, #fff); }
+.est-medidor.sobre .est-medidor-relleno { background: var(--naranja); }
+.est-medidor-promedio { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--texto); }
+.est-medidor-valor { min-width: 3.6rem; }
+.est-sobre {
+    display: inline-flex; align-items: center; gap: .25rem; padding: .1rem .45rem; border-radius: 999px;
+    font-size: .72rem; font-weight: 600; color: #8a4a0c; background: var(--naranja-fondo); white-space: nowrap;
+}
+.est-sobre .ico { width: 12px; height: 12px; }
+
+/* Línea de contexto bajo los filtros */
+.est-contexto {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .5rem; margin: 0; padding: .7rem 1.25rem;
+    border-top: 1px solid var(--borde); background: var(--superficie-2); border-radius: 0 0 var(--radio) var(--radio);
+    font-size: .82rem; color: var(--texto-suave);
+}
+.est-contexto .ico { width: 15px; height: 15px; color: var(--texto-tenue); }
+.est-contexto span { margin-left: auto; color: var(--texto-tenue); }
+
+/* Indicadores: etiqueta, valor, detalle, variación y minigráfica */
+.est-kpi { position: relative; display: flex; flex-direction: column; padding: 1.1rem 1.25rem 1rem; overflow: hidden; }
+.est-kpi p { margin: 0; }
+.est-kpi-etiqueta { font-size: .8rem; font-weight: 600; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .04em; }
+.est-kpi-valor { margin-top: .35rem !important; font-size: 2rem; font-weight: 700; line-height: 1.1; color: var(--texto); }
+.est-kpi-detalle { margin-top: .15rem !important; font-size: .84rem; color: var(--texto-suave); }
+.est-variacion { margin-top: .7rem !important; font-size: .78rem; color: var(--texto-tenue); }
+.est-variacion b { margin-right: .2rem; font-weight: 700; }
+.est-variacion.bien b { color: var(--verde); }
+.est-variacion.mal b { color: var(--rojo); }
+.est-variacion.neutro b { color: var(--texto); }
+.est-mini { position: relative; display: block; height: 30px; margin-top: .6rem; }
+.est-mini svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.est-mini polyline { fill: none; stroke: var(--borde-fuerte); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.est-mini i { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--primario); box-shadow: 0 0 0 2px var(--superficie); }
+
+/* Hallazgos */
+.est-hallazgos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 0; padding: 0; list-style: none; }
+.est-hallazgo { display: flex; align-items: flex-start; gap: .75rem; padding: 1rem 1.25rem; border-top: 1px solid var(--borde); }
+.est-hallazgo:nth-child(odd) { border-right: 1px solid var(--borde); }
+.est-hallazgo:nth-child(-n+2) { border-top: 0; }
+.est-hallazgo p { flex: 1; margin: 0; font-size: .9rem; line-height: 1.45; color: var(--texto-suave); }
+.est-hallazgo strong { color: var(--texto); font-weight: 600; }
+.est-hallazgo .boton { flex: none; align-self: center; }
+.est-hallazgo-icono { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 9px; background: var(--acento-fondo); color: var(--primario); }
+.est-hallazgo-icono .ico { width: 17px; height: 17px; }
+.est-h-bien .est-hallazgo-icono   { background: var(--verde-fondo);   color: var(--verde); }
+.est-h-mal .est-hallazgo-icono    { background: var(--naranja-fondo); color: var(--naranja); }
+.est-h-alerta .est-hallazgo-icono { background: var(--ambar-fondo);   color: var(--ambar); }
+
+/* Promedio en el gráfico de inasistencia: línea de referencia con su etiqueta */
+.est-promedio { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--texto-tenue); z-index: 1; pointer-events: none; }
+.est-promedio span {
+    position: absolute; left: .3rem; bottom: 3px; padding: 0 .3rem; border-radius: 4px;
+    font-size: .7rem; font-weight: 600; color: var(--texto-suave); background: color-mix(in srgb, var(--superficie) 85%, transparent);
+}
+.est-barra-valor small { margin-left: .2rem; font-weight: 500; color: var(--texto-tenue); }
+
+/* Tabla de datos de cada gráfico */
+.est-datos { margin-top: 1rem; border-top: 1px solid var(--borde); padding-top: .6rem; }
+.est-datos summary { cursor: pointer; font-size: .84rem; font-weight: 600; color: var(--primario-claro); }
+.est-datos .tabla-contenedor { margin-top: .6rem; }
+
+/* Tooltip */
+.est-tooltip {
+    position: fixed; z-index: 60; min-width: 150px; max-width: 260px; padding: .55rem .7rem; pointer-events: none;
+    background: var(--superficie); border: 1px solid var(--borde-fuerte); border-radius: 10px; box-shadow: var(--sombra-alta);
+    font-size: .8rem; color: var(--texto-suave);
+}
+.est-tooltip p { margin: 0; }
+.est-tooltip-titulo { margin-bottom: .3rem !important; font-weight: 600; color: var(--texto); }
+.est-tooltip-fila { display: grid; grid-template-columns: 12px auto 1fr; align-items: center; gap: .45rem; }
+.est-tooltip-fila b { color: var(--texto); font-variant-numeric: tabular-nums; text-align: right; }
+.est-tooltip-clave { display: block; width: 12px; height: 0; border-top: 2px solid var(--c, transparent); }
+.est-tooltip-clave.sin-color { border-top-color: transparent; }
+
+@media (max-width: 640px) {
+    .est-grafico { --alto: 180px; }
+    .est-area, .est-ejex { margin-left: 2.2rem; }
+    .est-ejex span { font-size: .62rem; }
+    .est-ejex-denso span:nth-child(even) { visibility: hidden; }   /* 12 meses: un mes sí y otro no */
+    .est-barras-h li { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+    .est-filtros .acciones { width: 100%; }
+    .est-hallazgos { grid-template-columns: minmax(0, 1fr); }
+    .est-hallazgo:nth-child(odd) { border-right: 0; }
+    .est-hallazgo:nth-child(2) { border-top: 1px solid var(--borde); }
+    .est-hallazgo { flex-wrap: wrap; padding: .9rem 1rem; }
+    .est-contexto span { margin-left: 0; width: 100%; }
+    .est-kpi-valor { font-size: 1.5rem; }
+}
+
+@media print {
+    .est-datos, .est-tooltip { display: none !important; }
+    .est-pila > span, .est-muestra, .est-barra, .est-medidor-pista, .est-medidor-relleno, .est-medidor-promedio, .est-punto, .est-relleno,
+    .est-mini i, .est-hallazgo-icono, .est-sobre {
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .est-banda { background: none !important; }
+}
