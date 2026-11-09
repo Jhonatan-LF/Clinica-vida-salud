@@ -22,6 +22,7 @@ $secciones = [
     'especialidades' => ['Registros', 'Especialidades', null],
     'horarios'       => ['Registros', 'Horario de atención', null],
     'reportes'       => ['Administración', 'Reportes', null],
+    'estadisticas'   => ['Administración', 'Estadísticas', null],
     'usuarios'       => ['Administración', 'Usuarios', '/usuarios'],
     'permisos'       => ['Administración', 'Roles y permisos', null],
     'bitacora'       => ['Administración', 'Bitácora', null],

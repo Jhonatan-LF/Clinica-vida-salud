@@ -194,6 +194,7 @@ clinica-vida-salud/
 | CU14 | Generar reportes | `reportes/casos_uso/CU14GenerarReportes.php` | `reportes/reportes` |
 | CU15 | Buscar el primer turno libre | `citas/casos_uso/CU15BuscarPrimerTurno.php` | `citas/programar` + `assets/js/citas.js` |
 | CU16 | Imprimir comprobante de cita | `citas/casos_uso/CU16ImprimirComprobante.php` | `citas/comprobante` |
+| CU17 | Consultar estadísticas | `reportes/casos_uso/CU17ConsultarEstadisticas.php` | `reportes/estadisticas` + `assets/js/estadisticas.js` |
 | — | Panel principal | `inicio/casos_uso/PanelPrincipal.php` | `inicio/panel`, `citas_hoy` |
 
 ## Requisitos y reglas cubiertos
