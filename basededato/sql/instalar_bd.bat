@@ -11,9 +11,26 @@ REM
 REM  Borra y vuelve a crear la base "clinica_vida_salud" y ejecuta
 REM  01 -> 05. Sirve tambien para dejar los datos como nuevos.
 REM =====================================================================
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions DisableDelayedExpansion
 chcp 65001 >nul
-cd /d "%~dp0"
+set "DIR=%~dp0"
+cd /d "%DIR%"
+
+REM ---- 0. Verificar que los .sql esten junto a este .bat -------------------
+set FALTA=
+for %%F in (01_esquema.sql 02_funciones_triggers.sql 03_vistas.sql 04_datos_iniciales.sql 05_datos_prueba.sql) do (
+    if not exist "%DIR%%%F" (
+        echo  [ERROR] Falta el archivo: %DIR%%%F
+        set FALTA=1
+    )
+)
+if defined FALTA (
+    echo.
+    echo  Este .bat debe ejecutarse desde la carpeta basededato\sql del proyecto,
+    echo  junto a los archivos 01..05 .sql. Si lo abrio dentro de un .zip,
+    echo  extraiga primero todo el .zip y ejecutelo desde la carpeta extraida.
+    goto :error
+)
 
 if "%PGHOST%"=="" set PGHOST=127.0.0.1
 if "%PGPORT%"=="" set PGPORT=5432
@@ -64,13 +81,11 @@ if errorlevel 1 goto :error
 if errorlevel 1 goto :error
 
 REM ---- 4. Ejecutar los scripts en orden -----------------------------------
-set N=2
-for %%F in (01_esquema.sql 02_funciones_triggers.sql 03_vistas.sql 04_datos_iniciales.sql 05_datos_prueba.sql) do (
-    echo  [!N!/6] %%F ...
-    "%PSQL%" -v ON_ERROR_STOP=1 -q -X -d %BD% -f "%%F"
-    if errorlevel 1 goto :error
-    set /a N+=1
-)
+call :ejecutar 2 01_esquema.sql            || goto :error
+call :ejecutar 3 02_funciones_triggers.sql || goto :error
+call :ejecutar 4 03_vistas.sql             || goto :error
+call :ejecutar 5 04_datos_iniciales.sql    || goto :error
+call :ejecutar 6 05_datos_prueba.sql       || goto :error
 
 echo.
 echo  ============================================================
@@ -82,6 +97,11 @@ echo.
 endlocal
 pause
 exit /b 0
+
+:ejecutar
+echo  [%1/6] %2 ...
+"%PSQL%" -v ON_ERROR_STOP=1 -q -X -d %BD% -f "%DIR%%2"
+exit /b %errorlevel%
 
 :error
 echo.
