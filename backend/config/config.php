@@ -12,8 +12,8 @@ $config = [
     'app' => [
         'nombre'       => 'Clínica Vida Salud',
         'zona_horaria' => 'America/La_Paz',
-        // true solo en desarrollo: muestra el detalle técnico de los errores.
-        'depuracion'   => false,
+        // true en desarrollo o para ver el detalle de los errores:
+        'depuracion'   => (bool) (getenv('APP_DEBUG') ?: true),
     ],
 
     // Conexión PDO con el controlador pdo_pgsql (requerimiento técnico 7)
