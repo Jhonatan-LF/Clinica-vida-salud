@@ -20,7 +20,7 @@ final class Correo
         if ($driver === 'smtp') {
             $host   = (string) Aplicacion::config('correo.host', '');
             $user   = (string) Aplicacion::config('correo.usuario', '');
-            $pass   = (string) Aplicacion::config('correo.clave', '');
+            $pass   = str_replace(' ', '', (string) Aplicacion::config('correo.clave', ''));
             $puerto = (int) Aplicacion::config('correo.puerto', 587);
             $cifrado= (string) Aplicacion::config('correo.seguridad', 'tls');
 
@@ -30,6 +30,8 @@ final class Correo
                     return self::enviarPorSmtp($host, $puerto, $cifrado, $user, $pass, $remitente, $nombreDe, $para, $asunto, $mensajeHtml);
                 } catch (\Throwable $e) {
                     error_log('Error enviando correo SMTP: ' . $e->getMessage());
+                    // Lanzar la excepción si estamos en producción para no silenciar el fallo
+                    throw $e;
                 }
             }
         }
@@ -63,7 +65,14 @@ final class Correo
         string $cuerpoHtml
     ): bool {
         $prefijo = ($cifrado === 'ssl') ? 'ssl://' : '';
-        $socket = @fsockopen($prefijo . $host, $puerto, $errno, $errstr, 15);
+        $contexto = stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true,
+            ]
+        ]);
+        $socket = @stream_socket_client($prefijo . $host . ':' . $puerto, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $contexto);
         if (!$socket) {
             throw new \RuntimeException("No se pudo conectar al servidor SMTP {$host}:{$puerto} ($errstr)");
         }
