@@ -75,7 +75,10 @@ final class CURecuperarContrasena extends Controlador
 </div>
 HTML;
 
-                Correo::enviar($usuario['correo'], 'Restablecer contraseña · Clínica Vida Salud', $html);
+                $enviado = Correo::enviar($usuario['correo'], 'Restablecer contraseña · Clínica Vida Salud', $html);
+                if (!$enviado) {
+                    throw new ErrorNegocio('No se pudo enviar el correo de recuperación. Revise la configuración del servidor de correo.');
+                }
 
                 Bitacora::registrar('recuperacion_clave', 'seguridad', 'Solicitó enlace de recuperación de contraseña.', [
                     'id_usuario'     => $usuario['id_usuario'],
