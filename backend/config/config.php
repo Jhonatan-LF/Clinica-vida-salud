@@ -18,11 +18,11 @@ $config = [
 
     // Conexión PDO con el controlador pdo_pgsql (requerimiento técnico 7)
     'bd' => [
-        'host'    => getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? '127.0.0.1'),
-        'puerto'  => (int)(getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? 5432)),
-        'nombre'  => getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? 'clinica_vida_salud'),
-        'usuario' => getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? 'postgres'),
-        'clave'   => getenv('DB_PASSWORD') ?: ($_ENV['DB_PASSWORD'] ?? 'postgres'),
+        'host'    => getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? (getenv('PGHOST') ?: '127.0.0.1')),
+        'puerto'  => (int)(getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? (getenv('PGPORT') ?: 5432))),
+        'nombre'  => getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? (getenv('PGDATABASE') ?: 'clinica_vida_salud')),
+        'usuario' => getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? (getenv('PGUSER') ?: (getenv('DB_USERNAME') ?: 'postgres'))),
+        'clave'   => getenv('DB_PASSWORD') ?: ($_ENV['DB_PASSWORD'] ?? (getenv('PGPASSWORD') ?: 'postgres')),
         'sslmode' => getenv('DB_SSLMODE') ?: ($_ENV['DB_SSLMODE'] ?? null),
     ],
 
