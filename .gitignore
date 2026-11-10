@@ -2,8 +2,9 @@
 backend/config/config.local.php
 .env
 
-# Registros de errores
+# Registros de errores y correos locales
 backend/storage/logs/*.log
+backend/storage/correos/
 
 # Resultados generados por las pruebas
 backend/tests/resultados_*

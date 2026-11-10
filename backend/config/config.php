@@ -32,13 +32,26 @@ $config = [
     ],
 
     'seguridad' => [
-        'max_intentos'    => 5,        // intentos fallidos antes de bloquear
-        'minutos_bloqueo' => 15,
+        'max_intentos'        => 3,    // intentos fallidos antes de bloquear (RF01)
+        'minutos_bloqueo_base'=> 1,    // 1er bloqueo: 1 min, 2do: 2 min, sucesivos: 4, 8, etc.
     ],
 
     'citas' => [
         'dias_maximos_reserva'          => 60, // hasta cuántos días adelante se reserva
         'horas_minimas_cancelar_portal' => 2,  // el paciente cancela con 2 h de anticipación
+    ],
+
+    // Configuración para el envío de correos (recuperación de contraseña, notificaciones)
+    // Puede usar 'smtp' (Gmail, Resend, Brevo, Mailtrap, etc.) o 'mail' (PHP nativo)
+    'correo' => [
+        'driver'      => getenv('MAIL_DRIVER') ?: ($_ENV['MAIL_DRIVER'] ?? 'smtp'),
+        'host'        => getenv('MAIL_HOST') ?: ($_ENV['MAIL_HOST'] ?? 'smtp.gmail.com'),
+        'puerto'      => (int) (getenv('MAIL_PORT') ?: ($_ENV['MAIL_PORT'] ?? 587)),
+        'seguridad'   => getenv('MAIL_ENCRYPTION') ?: ($_ENV['MAIL_ENCRYPTION'] ?? 'tls'), // 'tls' o 'ssl'
+        'usuario'     => getenv('MAIL_USERNAME') ?: ($_ENV['MAIL_USERNAME'] ?? ''),
+        'clave'       => getenv('MAIL_PASSWORD') ?: ($_ENV['MAIL_PASSWORD'] ?? ''),
+        'remitente'   => getenv('MAIL_FROM_ADDRESS') ?: ($_ENV['MAIL_FROM_ADDRESS'] ?? 'no-reply@clinicavidasalud.com'),
+        'nombre_from' => getenv('MAIL_FROM_NAME') ?: ($_ENV['MAIL_FROM_NAME'] ?? 'Clínica Vida Salud'),
     ],
 ];
 

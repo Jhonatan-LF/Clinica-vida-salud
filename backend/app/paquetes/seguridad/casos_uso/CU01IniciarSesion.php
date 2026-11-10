@@ -93,12 +93,19 @@ final class CU01IniciarSesion extends Controlador
             if (!$cuenta || !$claveCorrecta) {
                 Bitacora::registrar('inicio_fallido', 'seguridad',
                     $cuenta ? 'Contraseña incorrecta.' : 'El usuario o correo escrito no existe.', $quien);
-                if ($cuenta && $this->usuarios->registrarIntentoFallido((int) $cuenta['id_usuario'])) {
-                    Bitacora::registrar('cuenta_bloqueada', 'seguridad', sprintf(
-                        'Cuenta bloqueada %d minuto(s) por %d intentos fallidos.',
-                        (int) \App\Nucleo\Aplicacion::config('seguridad.minutos_bloqueo', 15),
-                        (int) \App\Nucleo\Aplicacion::config('seguridad.max_intentos', 5)
-                    ), $quien);
+                if ($cuenta) {
+                    $res = $this->usuarios->registrarIntentoFallido((int) $cuenta['id_usuario']);
+                    if ($res['bloqueado']) {
+                        Bitacora::registrar('cuenta_bloqueada', 'seguridad', sprintf(
+                            'Cuenta bloqueada %d minuto(s) por acumular %d intentos fallidos.',
+                            $res['minutos'],
+                            (int) \App\Nucleo\Aplicacion::config('seguridad.max_intentos', 3)
+                        ), $quien);
+                        throw new ErrorNegocio(sprintf(
+                            'Ha superado el límite de intentos permitidos. Su cuenta ha sido bloqueada por %d minuto(s).',
+                            $res['minutos']
+                        ));
+                    }
                 }
                 // Mismo mensaje en ambos casos: no se revela si el usuario existe.
                 throw new ErrorNegocio('Usuario o contraseña incorrectos.');

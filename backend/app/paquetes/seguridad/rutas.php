@@ -6,6 +6,7 @@
 use App\Nucleo\Enrutador;
 use App\Paquetes\Seguridad\CasosUso\CU01IniciarSesion;
 use App\Paquetes\Seguridad\CasosUso\CU02GestionarUsuariosPermisos;
+use App\Paquetes\Seguridad\CasosUso\CURecuperarContrasena;
 
 return static function (Enrutador $r): void {
     // CU01 · Iniciar sesión
@@ -14,6 +15,12 @@ return static function (Enrutador $r): void {
     $r->post('/salir',         [CU01IniciarSesion::class, 'cerrar'],          'autenticado');
     $r->get('/cuenta/clave',   [CU01IniciarSesion::class, 'formularioClave'], 'autenticado');
     $r->post('/cuenta/clave',  [CU01IniciarSesion::class, 'cambiarClave'],    'autenticado');
+
+    // Recuperación de contraseña por correo
+    $r->get('/recuperar-clave',   [CURecuperarContrasena::class, 'formulario'],           'publico');
+    $r->post('/recuperar-clave',  [CURecuperarContrasena::class, 'solicitar'],            'publico');
+    $r->get('/restablecer-clave', [CURecuperarContrasena::class, 'formularioRestablecer'], 'publico');
+    $r->post('/restablecer-clave',[CURecuperarContrasena::class, 'restablecer'],           'publico');
 
     // CU02 · Gestionar usuarios y permisos
     $r->get('/usuarios',               [CU02GestionarUsuariosPermisos::class, 'listar'],          'usuarios.gestionar');

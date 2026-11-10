@@ -104,8 +104,16 @@ final class Validador
 
             case 'clave':
                 $c = (string) $valor;
-                return (strlen($c) >= 8 && strlen($c) <= 64 && preg_match('/[A-Za-z]/', $c) && preg_match('/\d/', $c))
-                    ? null : "$etiqueta debe tener de 8 a 64 caracteres, con letras y números.";
+                // Mínimo 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial
+                $valida = strlen($c) >= 8
+                    && strlen($c) <= 64
+                    && preg_match('/[A-Z]/', $c)
+                    && preg_match('/[a-z]/', $c)
+                    && preg_match('/\d/', $c)
+                    && preg_match('/[^A-Za-z0-9]/', $c);
+                return $valida
+                    ? null
+                    : "$etiqueta debe tener al menos 8 caracteres e incluir 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial (ej: !@#$*).";
 
             case 'entero':
                 if (!preg_match('/^-?\d+$/', (string) $valor)) {

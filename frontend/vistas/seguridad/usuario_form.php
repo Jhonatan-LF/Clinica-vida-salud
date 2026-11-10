@@ -75,7 +75,7 @@ $rolActual = $anterior['id_rol'] ?? ($u['id_rol'] ?? '');
                                 <input type="password" id="clave" name="clave" autocomplete="new-password" <?= $esNuevo ? 'required' : '' ?> minlength="8" maxlength="64" data-regla="clave">
                                 <button type="button" class="ver-clave" data-ver-clave="clave" aria-label="Mostrar contraseña"><?= icono('ojo') ?></button>
                             </div>
-                            <p class="campo-ayuda">De 8 a 64 caracteres, con letras y números.</p>
+                            <p class="campo-ayuda">Mínimo 8 caracteres, con 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial (ej. !@#$*).</p>
                             <?= error_campo($errores, 'clave') ?>
                         </div>
                         <div class="campo<?= clase_error($errores, 'clave_confirmacion') ?>">
