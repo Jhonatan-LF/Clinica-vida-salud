@@ -1,8 +1,8 @@
-﻿-- =====================================================================
---  ClÃ­nica Vida Salud Â· Sistema web de gestiÃ³n de citas mÃ©dicas
---  01_esquema.sql â€” tipos, tablas, claves, CHECK, UNIQUE, Ã­ndices y EXCLUDE
+-- =====================================================================
+--  Clínica Vida Salud · Sistema web de gestión de citas médicas
+--  01_esquema.sql — tipos, tablas, claves, CHECK, UNIQUE, índices y EXCLUDE
 --
---  Orden de instalaciÃ³n: 01 â†’ 02 â†’ 03 â†’ 04 â†’ 05 (ver LEEME.md)
+--  Orden de instalación: 01 → 02 → 03 → 04 → 05 (ver LEEME.md)
 --  Todas las claves primarias se llaman id_<tabla>.
 --  Los nombres de las restricciones son los que traduce
 --  backend/app/nucleo/ManejadorErrores.php a mensajes para el usuario.
@@ -12,32 +12,32 @@ SET client_encoding = 'UTF8';
 SET client_min_messages = warning;
 
 -- btree_gist permite combinar "=" con "&&" en las restricciones EXCLUDE
--- (un mÃ©dico no puede tener dos citas que se crucen el mismo dÃ­a).
+-- (un médico no puede tener dos citas que se crucen el mismo día).
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 -- ---------------------------------------------------------------------
 --  TIPOS
 -- ---------------------------------------------------------------------
 
--- Estado de cualquier registro maestro (paciente, mÃ©dico, usuarioâ€¦).
+-- Estado de cualquier registro maestro (paciente, médico, usuario…).
 CREATE DOMAIN dom_estado_registro AS VARCHAR(10)
     NOT NULL DEFAULT 'activo'
     CHECK (VALUE IN ('activo', 'inactivo'));
 
--- Estados de la cita (RF10), en minÃºscula.
+-- Estados de la cita (RF10), en minúscula.
 CREATE DOMAIN dom_estado_cita AS VARCHAR(15)
     NOT NULL DEFAULT 'programada'
     CHECK (VALUE IN ('programada', 'confirmada', 'atendida', 'cancelada', 'inasistencia'));
 
--- TelÃ©fono: dÃ­gitos, espacios, "+" y "-" (7 a 20 caracteres).
+-- Teléfono: dígitos, espacios, "+" y "-" (7 a 20 caracteres).
 CREATE DOMAIN dom_telefono AS VARCHAR(20)
     CHECK (VALUE ~ '^[0-9+\- ]{7,20}$');
 
--- Correo electrÃ³nico bÃ¡sico, siempre en minÃºscula.
+-- Correo electrónico básico, siempre en minúscula.
 CREATE DOMAIN dom_correo AS VARCHAR(120)
     CHECK (VALUE ~ '^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$');
 
--- Rango de horas de un dÃ­a (08:00â€“08:30). Lo usan las restricciones
+-- Rango de horas de un día (08:00–08:30). Lo usan las restricciones
 -- EXCLUDE para detectar horarios y citas superpuestos.
 CREATE TYPE rango_hora AS RANGE (subtype = TIME);
 
@@ -72,7 +72,7 @@ CREATE TABLE rol_permiso (
 );
 
 -- ---------------------------------------------------------------------
---  MÃ‰DICOS: especialidad, medico, medico_especialidad,
+--  MÉDICOS: especialidad, medico, medico_especialidad,
 --           horario_atencion, dia_no_laborable
 -- ---------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ CREATE TABLE especialidad (
     CONSTRAINT ck_especialidad_nombre CHECK (length(trim(nombre)) >= 3),
     CONSTRAINT ck_especialidad_color  CHECK (color ~ '^#[0-9a-fA-F]{6}$')
 );
--- RF04: nombre Ãºnico NORMALIZADO (Ã­ndice uq_especialidad_nombre_normalizado,
+-- RF04: nombre único NORMALIZADO (índice uq_especialidad_nombre_normalizado,
 -- se crea en 02_funciones_triggers.sql porque usa fn_normalizar_texto).
 
 CREATE TABLE medico (
@@ -114,7 +114,7 @@ CREATE TABLE medico_especialidad (
     CONSTRAINT fk_me_especialidad FOREIGN KEY (id_especialidad) REFERENCES especialidad (id_especialidad)
 );
 
--- RF05: bloques de atenciÃ³n por mÃ©dico y dÃ­a de la semana (1 = lunes â€¦ 7 = domingo).
+-- RF05: bloques de atención por médico y día de la semana (1 = lunes … 7 = domingo).
 CREATE TABLE horario_atencion (
     id_horario    INT GENERATED ALWAYS AS IDENTITY,
     id_medico     INT      NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE horario_atencion (
     CONSTRAINT ck_horario_rango    CHECK (hora_fin > hora_inicio),
     CONSTRAINT ck_horario_duracion CHECK (duracion_cita IN (15, 20, 30, 45, 60)),
     CONSTRAINT ck_horario_tamano_bloque  CHECK (hora_fin - hora_inicio >= make_interval(mins => duracion_cita)),
-    -- Un mÃ©dico no tiene dos bloques ACTIVOS que se crucen el mismo dÃ­a.
+    -- Un médico no tiene dos bloques ACTIVOS que se crucen el mismo día.
     CONSTRAINT ex_horario_sin_solape EXCLUDE USING gist (
         id_medico WITH =,
         dia_semana WITH =,
@@ -137,7 +137,7 @@ CREATE TABLE horario_atencion (
     ) WHERE (estado = 'activo')
 );
 
--- Feriados (id_medico NULL = toda la clÃ­nica) y ausencias de un mÃ©dico.
+-- Feriados (id_medico NULL = toda la clínica) y ausencias de un médico.
 CREATE TABLE dia_no_laborable (
     id_dia_no_laborable INT GENERATED ALWAYS AS IDENTITY,
     fecha               DATE         NOT NULL,
@@ -157,7 +157,7 @@ CREATE UNIQUE INDEX uq_dia_no_laborable ON dia_no_laborable (fecha, COALESCE(id_
 CREATE TABLE paciente (
     id_paciente           INT GENERATED ALWAYS AS IDENTITY,
     codigo                VARCHAR(12) NOT NULL,              -- PAC-0001 (lo asigna un trigger)
-    ci                    VARCHAR(15),                        -- opcional (p. ej. un bebÃ©), pero Ãºnico
+    ci                    VARCHAR(15),                        -- opcional (p. ej. un bebé), pero único
     nombres               VARCHAR(60) NOT NULL,
     apellidos             VARCHAR(60) NOT NULL,
     fecha_nacimiento      DATE        NOT NULL,
@@ -165,7 +165,7 @@ CREATE TABLE paciente (
     telefono              dom_telefono NOT NULL,
     correo                dom_correo,
     direccion             VARCHAR(200),
-    -- InformaciÃ³n mÃ©dica del perfil (punto 3.4 del examen)
+    -- Información médica del perfil (punto 3.4 del examen)
     tipo_sangre           VARCHAR(3),
     alergias              VARCHAR(250),
     enfermedades_cronicas VARCHAR(250),
@@ -173,7 +173,7 @@ CREATE TABLE paciente (
     antecedentes          VARCHAR(500),
     -- Preferencias de la cuenta
     recibir_recordatorios BOOLEAN NOT NULL DEFAULT TRUE,
-    compartir_info_medica BOOLEAN NOT NULL DEFAULT TRUE,     -- el mÃ©dico ve la informaciÃ³n mÃ©dica
+    compartir_info_medica BOOLEAN NOT NULL DEFAULT TRUE,     -- el médico ve la información médica
     estado                dom_estado_registro,
     creado_en             TIMESTAMP NOT NULL DEFAULT localtimestamp,
     actualizado_en        TIMESTAMP NOT NULL DEFAULT localtimestamp,
@@ -199,7 +199,7 @@ CREATE TABLE contacto_emergencia (
 );
 
 -- ---------------------------------------------------------------------
---  USUARIO (va despuÃ©s de mÃ©dico y paciente porque puede vincularse a ellos)
+--  USUARIO (va después de médico y paciente porque puede vincularse a ellos)
 -- ---------------------------------------------------------------------
 
 CREATE TABLE usuario (
@@ -209,7 +209,7 @@ CREATE TABLE usuario (
     password_hash     VARCHAR(255) NOT NULL,                 -- password_hash() de PHP (bcrypt)
     nombre_completo   VARCHAR(120) NOT NULL,
     id_rol            INT          NOT NULL,
-    id_medico         INT,                                   -- solo rol mÃ©dico
+    id_medico         INT,                                   -- solo rol médico
     id_paciente       INT,                                   -- solo rol paciente
     estado            dom_estado_registro,
     intentos_fallidos SMALLINT     NOT NULL DEFAULT 0,       -- RF01: bloqueo tras 5 intentos
@@ -228,7 +228,7 @@ CREATE TABLE usuario (
     CONSTRAINT fk_usuario_paciente FOREIGN KEY (id_paciente) REFERENCES paciente (id_paciente)
 );
 
--- BitÃ¡cora de acciones (CU02). Nunca guarda contraseÃ±as ni formularios.
+-- Bitácora de acciones (CU02). Nunca guarda contraseñas ni formularios.
 CREATE TABLE bitacora (
     id_bitacora BIGINT GENERATED ALWAYS AS IDENTITY,
     fecha_hora  TIMESTAMP    NOT NULL DEFAULT localtimestamp,
@@ -265,10 +265,10 @@ CREATE TABLE cita (
     actualizado_en      TIMESTAMP NOT NULL DEFAULT localtimestamp,
     CONSTRAINT pk_cita PRIMARY KEY (id_cita),
     CONSTRAINT uq_cita_codigo UNIQUE (codigo),
-    -- RN03: paciente y mÃ©dico vÃ¡lidos. RN11: no se borra un paciente/mÃ©dico con citas (RESTRICT).
+    -- RN03: paciente y médico válidos. RN11: no se borra un paciente/médico con citas (RESTRICT).
     CONSTRAINT fk_cita_paciente FOREIGN KEY (id_paciente) REFERENCES paciente (id_paciente) ON DELETE RESTRICT,
     CONSTRAINT fk_cita_medico   FOREIGN KEY (id_medico)   REFERENCES medico (id_medico)     ON DELETE RESTRICT,
-    -- RN03: el mÃ©dico debe atender la especialidad de la cita (FK compuesta).
+    -- RN03: el médico debe atender la especialidad de la cita (FK compuesta).
     CONSTRAINT fk_cita_medico_especialidad FOREIGN KEY (id_medico, id_especialidad)
         REFERENCES medico_especialidad (id_medico, id_especialidad) ON DELETE RESTRICT,
     CONSTRAINT fk_cita_usuario FOREIGN KEY (id_usuario_registro) REFERENCES usuario (id_usuario) ON DELETE SET NULL,
@@ -276,7 +276,7 @@ CREATE TABLE cita (
     CONSTRAINT ck_cita_modalidad CHECK (modalidad IN ('presencial', 'virtual')),
     -- RF09: una cita cancelada siempre tiene motivo.
     CONSTRAINT ck_cita_cancelada CHECK (estado <> 'cancelada' OR motivo_cancelacion IS NOT NULL),
-    -- RF07 / RN07: Ãºltima barrera contra citas superpuestas.
+    -- RF07 / RN07: última barrera contra citas superpuestas.
     -- RN09: las canceladas NO ocupan horario (quedan fuera del WHERE).
     CONSTRAINT ex_cita_medico_sin_solape EXCLUDE USING gist (
         id_medico WITH =,
@@ -313,15 +313,17 @@ CREATE TABLE cita_historial (
     CONSTRAINT ck_historial_accion  CHECK (accion IN ('registro', 'estado', 'reprogramacion'))
 );
 CREATE INDEX ix_historial_cita ON cita_historial (id_cita, fecha_hora);
+
+
 -- =====================================================================
---  ClÃ­nica Vida Salud Â· 02_funciones_triggers.sql
---  Funciones y triggers: las reglas de negocio se controlan tambiÃ©n en
+--  Clínica Vida Salud · 02_funciones_triggers.sql
+--  Funciones y triggers: las reglas de negocio se controlan también en
 --  la base de datos (doble control: servidor PHP + PostgreSQL).
 --
---  Variables de sesiÃ³n que envÃ­a el backend en cada transacciÃ³n
+--  Variables de sesión que envía el backend en cada transacción
 --  (BaseDatos::transaccion):
---    app.id_usuario  -> quiÃ©n hace el cambio (para cita_historial)
---    app.detalle     -> descripciÃ³n del cambio (motivo, "Cita registrada"â€¦)
+--    app.id_usuario  -> quién hace el cambio (para cita_historial)
+--    app.detalle     -> descripción del cambio (motivo, "Cita registrada"…)
 --  y solo el script de datos de prueba:
 --    app.carga_datos = 'si' -> permite registrar citas pasadas (historial de ejemplo)
 -- =====================================================================
@@ -332,21 +334,21 @@ SET client_min_messages = warning;
 --  Funciones auxiliares
 -- ---------------------------------------------------------------------
 
--- "  PediatrÃ­a  " -> "pediatria" : sin tildes, sin mayÃºsculas, sin espacios repetidos.
--- RF04 (nombre de especialidad Ãºnico) y bÃºsquedas de pacientes y mÃ©dicos.
+-- "  Pediatría  " -> "pediatria" : sin tildes, sin mayúsculas, sin espacios repetidos.
+-- RF04 (nombre de especialidad único) y búsquedas de pacientes y médicos.
 CREATE OR REPLACE FUNCTION fn_normalizar_texto(p_texto TEXT)
 RETURNS TEXT
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 AS $$
     SELECT lower(regexp_replace(trim(translate(COALESCE(p_texto, ''),
-        'ÃÃ‰ÃÃ“ÃšÃœÃ‘Ã€ÃˆÃŒÃ’Ã™Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±Ã Ã¨Ã¬Ã²Ã¹',
+        'ÁÉÍÓÚÜÑÀÈÌÒÙáéíóúüñàèìòù',
         'AEIOUUNAEIOUaeiouunaeiou')), '\s+', ' ', 'g'));
 $$;
 
 -- RF04: no hay dos especialidades con el mismo nombre normalizado.
 CREATE UNIQUE INDEX uq_especialidad_nombre_normalizado ON especialidad (fn_normalizar_texto(nombre));
 
--- Valor de una variable de sesiÃ³n de la aplicaciÃ³n (vacÃ­o si no existe).
+-- Valor de una variable de sesión de la aplicación (vacío si no existe).
 CREATE OR REPLACE FUNCTION fn_variable_app(p_nombre TEXT)
 RETURNS TEXT
 LANGUAGE sql STABLE
@@ -354,8 +356,8 @@ AS $$
     SELECT COALESCE(current_setting('app.' || p_nombre, true), '');
 $$;
 
--- Intervalos de atenciÃ³n de un mÃ©dico en una fecha, con su situaciÃ³n (RF05, RF06).
--- Es la misma lÃ³gica que backend/app/paquetes/citas/servicios/Disponibilidad.php;
+-- Intervalos de atención de un médico en una fecha, con su situación (RF05, RF06).
+-- Es la misma lógica que backend/app/paquetes/citas/servicios/Disponibilidad.php;
 -- se usa en los datos de prueba y en las pruebas SQL.
 CREATE OR REPLACE FUNCTION fn_intervalos_medico(p_medico INT, p_fecha DATE)
 RETURNS TABLE (hora_inicio TIME, hora_fin TIME, libre BOOLEAN)
@@ -382,7 +384,7 @@ AS $$
 $$;
 
 -- ---------------------------------------------------------------------
---  CÃ³digos legibles: PAC-0001, MED-0001, CM-0001 (RN01, RN02)
+--  Códigos legibles: PAC-0001, MED-0001, CM-0001 (RN01, RN02)
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_tg_asignar_codigo()
 RETURNS TRIGGER
@@ -403,7 +405,7 @@ CREATE TRIGGER tg_medico_codigo   BEFORE INSERT ON medico   FOR EACH ROW EXECUTE
 CREATE TRIGGER tg_cita_codigo     BEFORE INSERT ON cita     FOR EACH ROW EXECUTE FUNCTION fn_tg_asignar_codigo();
 
 -- ---------------------------------------------------------------------
---  Normalizar texto: espacios, mayÃºsculas del CI y correos en minÃºscula
+--  Normalizar texto: espacios, mayúsculas del CI y correos en minúscula
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_tg_normalizar_texto()
 RETURNS TRIGGER
@@ -438,7 +440,7 @@ CREATE TRIGGER tg_especialidad_normalizar BEFORE INSERT OR UPDATE ON especialida
 CREATE TRIGGER tg_usuario_normalizar      BEFORE INSERT OR UPDATE ON usuario      FOR EACH ROW EXECUTE FUNCTION fn_tg_normalizar_texto();
 
 -- ---------------------------------------------------------------------
---  RN12: la cuenta de un mÃ©dico o paciente debe estar vinculada a Ã©l
+--  RN12: la cuenta de un médico o paciente debe estar vinculada a él
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_tg_validar_usuario_rol()
 RETURNS TRIGGER
@@ -449,7 +451,7 @@ DECLARE
 BEGIN
     SELECT nombre INTO v_rol FROM rol WHERE id_rol = NEW.id_rol;
     IF v_rol = 'medico' AND NEW.id_medico IS NULL THEN
-        RAISE EXCEPTION 'RN12: un usuario con rol mÃ©dico debe estar vinculado a un mÃ©dico.';
+        RAISE EXCEPTION 'RN12: un usuario con rol médico debe estar vinculado a un médico.';
     END IF;
     IF v_rol = 'paciente' AND NEW.id_paciente IS NULL THEN
         RAISE EXCEPTION 'RN12: un usuario con rol paciente debe estar vinculado a un paciente.';
@@ -468,7 +470,7 @@ CREATE TRIGGER tg_usuario_validar_rol BEFORE INSERT OR UPDATE ON usuario
     FOR EACH ROW EXECUTE FUNCTION fn_tg_validar_usuario_rol();
 
 -- ---------------------------------------------------------------------
---  fn_tg_validar_cita: RN03â€“RN06 y RN08 al registrar o reprogramar
+--  fn_tg_validar_cita: RN03–RN06 y RN08 al registrar o reprogramar
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_tg_validar_cita()
 RETURNS TRIGGER
@@ -486,18 +488,18 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- RN04: mÃ©dico activo para citas nuevas o al cambiar de mÃ©dico.
+    -- RN04: médico activo para citas nuevas o al cambiar de médico.
     IF TG_OP = 'INSERT' OR NEW.id_medico <> OLD.id_medico THEN
         SELECT estado INTO v_estado_medico FROM medico WHERE id_medico = NEW.id_medico;
         IF v_estado_medico IS DISTINCT FROM 'activo' THEN
-            RAISE EXCEPTION 'RN04: el mÃ©dico estÃ¡ inactivo y no puede recibir nuevas citas.';
+            RAISE EXCEPTION 'RN04: el médico está inactivo y no puede recibir nuevas citas.';
         END IF;
     END IF;
 
     IF TG_OP = 'INSERT' THEN
         SELECT estado INTO v_estado_paciente FROM paciente WHERE id_paciente = NEW.id_paciente;
         IF v_estado_paciente IS DISTINCT FROM 'activo' THEN
-            RAISE EXCEPTION 'RN03: el paciente estÃ¡ inactivo y no puede recibir nuevas citas.';
+            RAISE EXCEPTION 'RN03: el paciente está inactivo y no puede recibir nuevas citas.';
         END IF;
     END IF;
 
@@ -506,15 +508,15 @@ BEGIN
         RAISE EXCEPTION 'RN06: no se pueden registrar citas en fechas u horas pasadas.';
     END IF;
 
-    -- RN05: la fecha no puede estar bloqueada (feriado o ausencia del mÃ©dico).
+    -- RN05: la fecha no puede estar bloqueada (feriado o ausencia del médico).
     SELECT descripcion INTO v_feriado FROM dia_no_laborable
      WHERE fecha = NEW.fecha AND (id_medico IS NULL OR id_medico = NEW.id_medico)
      LIMIT 1;
     IF v_feriado IS NOT NULL THEN
-        RAISE EXCEPTION 'RN05: la fecha estÃ¡ bloqueada (%).', v_feriado;
+        RAISE EXCEPTION 'RN05: la fecha está bloqueada (%).', v_feriado;
     END IF;
 
-    -- RN05: dentro de un bloque activo del mÃ©dico para ese dÃ­a de la semana.
+    -- RN05: dentro de un bloque activo del médico para ese día de la semana.
     SELECT * INTO v_bloque FROM horario_atencion h
      WHERE h.id_medico = NEW.id_medico
        AND h.dia_semana = EXTRACT(ISODOW FROM NEW.fecha)
@@ -523,10 +525,10 @@ BEGIN
        AND NEW.hora_fin <= h.hora_fin
      LIMIT 1;
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'RN05: la cita estÃ¡ fuera del horario de atenciÃ³n del mÃ©dico.';
+        RAISE EXCEPTION 'RN05: la cita está fuera del horario de atención del médico.';
     END IF;
 
-    -- RN08: respeta la duraciÃ³n y los intervalos configurados del bloque.
+    -- RN08: respeta la duración y los intervalos configurados del bloque.
     IF NEW.hora_fin - NEW.hora_inicio <> make_interval(mins => v_bloque.duracion_cita)
        OR (EXTRACT(EPOCH FROM NEW.hora_inicio - v_bloque.hora_inicio)::INT % (v_bloque.duracion_cita * 60)) <> 0 THEN
         RAISE EXCEPTION 'RN08: la cita debe durar % minutos y empezar en un intervalo del horario.', v_bloque.duracion_cita;
@@ -556,9 +558,9 @@ BEGIN
         (OLD.estado = 'programada' AND NEW.estado IN ('confirmada', 'atendida', 'cancelada', 'inasistencia')) OR
         (OLD.estado = 'confirmada' AND NEW.estado IN ('atendida', 'cancelada', 'inasistencia'))
     ) THEN
-        RAISE EXCEPTION 'RF10: transiciÃ³n no permitida de "%" a "%".', OLD.estado, NEW.estado;
+        RAISE EXCEPTION 'RF10: transición no permitida de "%" a "%".', OLD.estado, NEW.estado;
     END IF;
-    -- Las citas cerradas no cambian de fecha ni de mÃ©dico en la misma operaciÃ³n.
+    -- Las citas cerradas no cambian de fecha ni de médico en la misma operación.
     IF NEW.estado IN ('atendida', 'inasistencia', 'cancelada')
        AND (NEW.fecha <> OLD.fecha OR NEW.hora_inicio <> OLD.hora_inicio OR NEW.id_medico <> OLD.id_medico) THEN
         RAISE EXCEPTION 'RF10: una cita % no puede reprogramarse.', NEW.estado;
@@ -573,7 +575,7 @@ CREATE TRIGGER tg_cita_transicion
     FOR EACH ROW EXECUTE FUNCTION fn_tg_validar_transicion_cita();
 
 -- ---------------------------------------------------------------------
---  RN10: historial de cada cita (alta, cambio de estado, reprogramaciÃ³n)
+--  RN10: historial de cada cita (alta, cambio de estado, reprogramación)
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_tg_historial_cita()
 RETURNS TRIGGER
@@ -631,8 +633,8 @@ CREATE TRIGGER tg_historial_no_borrar BEFORE DELETE ON cita_historial
     FOR EACH ROW EXECUTE FUNCTION fn_tg_no_borrar();
 
 -- ---------------------------------------------------------------------
---  RN11: un paciente o mÃ©dico CON citas no se elimina: se desactiva
---  (sin citas sÃ­ puede borrarse, p. ej. un registro hecho por error)
+--  RN11: un paciente o médico CON citas no se elimina: se desactiva
+--  (sin citas sí puede borrarse, p. ej. un registro hecho por error)
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_tg_desactivar_en_lugar_de_borrar()
 RETURNS TRIGGER
@@ -642,13 +644,13 @@ BEGIN
     IF TG_TABLE_NAME = 'paciente' THEN
         IF EXISTS (SELECT 1 FROM cita WHERE id_paciente = OLD.id_paciente) THEN
             UPDATE paciente SET estado = 'inactivo' WHERE id_paciente = OLD.id_paciente;
-            RAISE NOTICE 'RN11: el paciente % tiene citas; se desactivÃ³ en lugar de eliminarse.', OLD.codigo;
+            RAISE NOTICE 'RN11: el paciente % tiene citas; se desactivó en lugar de eliminarse.', OLD.codigo;
             RETURN NULL;   -- cancela el DELETE
         END IF;
     ELSIF TG_TABLE_NAME = 'medico' THEN
         IF EXISTS (SELECT 1 FROM cita WHERE id_medico = OLD.id_medico) THEN
             UPDATE medico SET estado = 'inactivo' WHERE id_medico = OLD.id_medico;
-            RAISE NOTICE 'RN11: el mÃ©dico % tiene citas; se desactivÃ³ en lugar de eliminarse.', OLD.codigo;
+            RAISE NOTICE 'RN11: el médico % tiene citas; se desactivó en lugar de eliminarse.', OLD.codigo;
             RETURN NULL;
         END IF;
     END IF;
@@ -662,21 +664,23 @@ CREATE TRIGGER tg_medico_no_borrar BEFORE DELETE ON medico
     FOR EACH ROW EXECUTE FUNCTION fn_tg_desactivar_en_lugar_de_borrar();
 
 -- ---------------------------------------------------------------------
---  BitÃ¡cora inalterable: solo se agregan registros (CU02)
+--  Bitácora inalterable: solo se agregan registros (CU02)
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_tg_bitacora_inalterable()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    RAISE EXCEPTION 'La bitÃ¡cora no se modifica ni se borra: solo se agregan registros.';
+    RAISE EXCEPTION 'La bitácora no se modifica ni se borra: solo se agregan registros.';
 END;
 $$;
 
 CREATE TRIGGER tg_bitacora_inalterable BEFORE UPDATE OR DELETE ON bitacora
     FOR EACH ROW EXECUTE FUNCTION fn_tg_bitacora_inalterable();
+
+
 -- =====================================================================
---  ClÃ­nica Vida Salud Â· 03_vistas.sql
+--  Clínica Vida Salud · 03_vistas.sql
 --  Vistas de solo lectura que usa el backend (agenda, historial, reportes).
 -- =====================================================================
 
@@ -712,7 +716,7 @@ SELECT c.id_cita,
   JOIN especialidad e ON e.id_especialidad = c.id_especialidad
   LEFT JOIN usuario u ON u.id_usuario = c.id_usuario_registro;
 
--- MÃ©dico con sus especialidades en una sola fila (RF03).
+-- Médico con sus especialidades en una sola fila (RF03).
 CREATE OR REPLACE VIEW v_medico_especialidades AS
 SELECT m.id_medico,
        m.codigo,
@@ -731,7 +735,7 @@ SELECT m.id_medico,
   LEFT JOIN especialidad e         ON e.id_especialidad = me.id_especialidad
  GROUP BY m.id_medico;
 
--- Totales de citas por dÃ­a y estado (panel y reporte de asistencia).
+-- Totales de citas por día y estado (panel y reporte de asistencia).
 CREATE OR REPLACE VIEW v_resumen_citas_dia AS
 SELECT fecha,
        count(*)::INT                                          AS total,
@@ -742,12 +746,14 @@ SELECT fecha,
        count(*) FILTER (WHERE estado = 'inasistencia')::INT   AS inasistencias
   FROM cita
  GROUP BY fecha;
+
+
 -- =====================================================================
---  ClÃ­nica Vida Salud Â· 04_datos_iniciales.sql
---  Datos mÃ­nimos para que el sistema funcione: roles, permisos,
+--  Clínica Vida Salud · 04_datos_iniciales.sql
+--  Datos mínimos para que el sistema funcione: roles, permisos,
 --  permisos por rol, especialidades y la cuenta del administrador.
 --
---  ContraseÃ±a de las cuentas de demostraciÃ³n: Clinica2026*
+--  Contraseña de las cuentas de demostración: Clinica2026*
 --  (se guarda solo su hash bcrypt, generado con password_hash() de PHP)
 -- =====================================================================
 
@@ -755,35 +761,35 @@ SELECT fecha,
 --  Roles
 -- ---------------------------------------------------------------------
 INSERT INTO rol (nombre, descripcion) VALUES
-    ('administrador', 'Acceso total: usuarios, permisos, registros, citas, reportes y bitÃ¡cora.'),
+    ('administrador', 'Acceso total: usuarios, permisos, registros, citas, reportes y bitácora.'),
     ('recepcionista', 'Registra pacientes y programa, reprograma, confirma y cancela citas.'),
-    ('medico',        'Consulta su propia agenda, registra la atenciÃ³n y ve el historial de sus pacientes.'),
-    ('paciente',      'Portal del paciente: perfil, reserva en lÃ­nea y seguimiento de sus citas.');
+    ('medico',        'Consulta su propia agenda, registra la atención y ve el historial de sus pacientes.'),
+    ('paciente',      'Portal del paciente: perfil, reserva en línea y seguimiento de sus citas.');
 
 -- ---------------------------------------------------------------------
---  Permisos (RN12: cada operaciÃ³n exige su permiso)
+--  Permisos (RN12: cada operación exige su permiso)
 -- ---------------------------------------------------------------------
 INSERT INTO permiso (codigo, descripcion, modulo) VALUES
     ('usuarios.gestionar',       'Registrar usuarios, asignar roles y definir permisos',          'seguridad'),
-    ('bitacora.ver',             'Consultar la bitÃ¡cora de acciones',                              'seguridad'),
+    ('bitacora.ver',             'Consultar la bitácora de acciones',                              'seguridad'),
     ('pacientes.ver',            'Listar, buscar y ver la ficha de los pacientes',                 'pacientes'),
     ('pacientes.gestionar',      'Registrar, modificar y desactivar pacientes',                    'pacientes'),
     ('pacientes.historial',      'Consultar el historial de citas de un paciente',                 'pacientes'),
-    ('medicos.ver',              'Listar, buscar y ver la ficha de los mÃ©dicos',                   'medicos'),
-    ('medicos.gestionar',        'Registrar, modificar y desactivar mÃ©dicos',                      'medicos'),
+    ('medicos.ver',              'Listar, buscar y ver la ficha de los médicos',                   'medicos'),
+    ('medicos.gestionar',        'Registrar, modificar y desactivar médicos',                      'medicos'),
     ('especialidades.gestionar', 'Registrar, modificar y desactivar especialidades',               'medicos'),
-    ('horarios.gestionar',       'Definir horarios de atenciÃ³n, feriados y ausencias',             'medicos'),
-    ('citas.ver',                'Listar y consultar las citas de la clÃ­nica',                     'citas'),
+    ('horarios.gestionar',       'Definir horarios de atención, feriados y ausencias',             'medicos'),
+    ('citas.ver',                'Listar y consultar las citas de la clínica',                     'citas'),
     ('citas.programar',          'Programar citas para los pacientes',                             'citas'),
     ('citas.reprogramar',        'Cambiar la fecha u hora de una cita',                            'citas'),
     ('citas.cancelar',           'Cancelar citas indicando el motivo',                             'citas'),
     ('citas.confirmar',          'Confirmar la asistencia o registrar la inasistencia',            'citas'),
     ('citas.atender',            'Marcar una cita como atendida',                                  'citas'),
-    ('agenda.ver',               'Ver la agenda de cualquier mÃ©dico',                              'agenda'),
-    ('agenda.propia',            'Ver solo la agenda propia (mÃ©dico)',                             'agenda'),
+    ('agenda.ver',               'Ver la agenda de cualquier médico',                              'agenda'),
+    ('agenda.propia',            'Ver solo la agenda propia (médico)',                             'agenda'),
     ('reportes.ver',             'Generar y exportar reportes',                                    'reportes'),
     ('portal.perfil',            'Ver y actualizar el perfil propio (paciente)',                   'portal'),
-    ('portal.reservar',          'Reservar citas en lÃ­nea (paciente)',                             'portal'),
+    ('portal.reservar',          'Reservar citas en línea (paciente)',                             'portal'),
     ('portal.mis_citas',         'Ver y cancelar las citas propias (paciente)',                    'portal');
 
 -- ---------------------------------------------------------------------
@@ -803,7 +809,7 @@ SELECT r.id_rol, p.id_permiso FROM rol r JOIN permiso p ON p.codigo IN (
     'agenda.ver')
  WHERE r.nombre = 'recepcionista';
 
--- MÃ©dico: su agenda, marcar como atendida o inasistencia (solo sus citas) e historial de sus pacientes
+-- Médico: su agenda, marcar como atendida o inasistencia (solo sus citas) e historial de sus pacientes
 INSERT INTO rol_permiso (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso FROM rol r JOIN permiso p ON p.codigo IN (
     'agenda.propia', 'citas.atender', 'citas.confirmar', 'pacientes.historial')
@@ -820,71 +826,73 @@ SELECT r.id_rol, p.id_permiso FROM rol r JOIN permiso p ON p.codigo IN (
 -- ---------------------------------------------------------------------
 -- Cada especialidad tiene su color en la agenda (se cambia en la pantalla Especialidades).
 INSERT INTO especialidad (nombre, descripcion, color) VALUES
-    ('Medicina General', 'Consulta general, control de salud y derivaciÃ³n a especialistas.',   '#2563c9'),  -- azul
-    ('PediatrÃ­a',        'AtenciÃ³n de niÃ±os y adolescentes, control de crecimiento y vacunas.', '#0ea5e9'),  -- celeste
-    ('CardiologÃ­a',      'PrevenciÃ³n, diagnÃ³stico y control de enfermedades del corazÃ³n.',      '#e05252'),  -- rojo suave
-    ('GinecologÃ­a',      'Salud de la mujer, control ginecolÃ³gico y prenatal.',                 '#db5f9a'),  -- rosado
-    ('TraumatologÃ­a',    'Lesiones de huesos, mÃºsculos y articulaciones.',                      '#8b5cf6'),  -- morado
-    ('OdontologÃ­a',      'Salud bucal: limpiezas, caries, extracciones y control dental.',      '#14b8a6');  -- verde agua
+    ('Medicina General', 'Consulta general, control de salud y derivación a especialistas.',   '#2563c9'),  -- azul
+    ('Pediatría',        'Atención de niños y adolescentes, control de crecimiento y vacunas.', '#0ea5e9'),  -- celeste
+    ('Cardiología',      'Prevención, diagnóstico y control de enfermedades del corazón.',      '#e05252'),  -- rojo suave
+    ('Ginecología',      'Salud de la mujer, control ginecológico y prenatal.',                 '#db5f9a'),  -- rosado
+    ('Traumatología',    'Lesiones de huesos, músculos y articulaciones.',                      '#8b5cf6'),  -- morado
+    ('Odontología',      'Salud bucal: limpiezas, caries, extracciones y control dental.',      '#14b8a6');  -- verde agua
 
 -- ---------------------------------------------------------------------
---  Administrador del sistema (usuario: admin Â· contraseÃ±a: Clinica2026*)
+--  Administrador del sistema (usuario: admin · contraseña: Clinica2026*)
 -- ---------------------------------------------------------------------
 INSERT INTO usuario (nombre_usuario, correo, password_hash, nombre_completo, id_rol)
 SELECT 'admin', 'ronaldcarrillocallisaya@gmail.com',
        '$2y$10$0yRfD1926PtAtv1lHDF9Mu/Bw3qSrEWeqCXSkfeqbB6zYPxT3Q.2u',
        'Administrador del Sistema', id_rol
   FROM rol WHERE nombre = 'administrador';
+
+
 -- =====================================================================
---  ClÃ­nica Vida Salud Â· 05_datos_prueba.sql
---  Datos de demostraciÃ³n: mÃ©dicos, horarios, feriados, pacientes,
---  usuarios y citas. Las fechas se calculan RESPECTO AL DÃA DE
---  INSTALACIÃ“N, asÃ­ siempre hay "citas de hoy", citas pasadas
+--  Clínica Vida Salud · 05_datos_prueba.sql
+--  Datos de demostración: médicos, horarios, feriados, pacientes,
+--  usuarios y citas. Las fechas se calculan RESPECTO AL DÍA DE
+--  INSTALACIÓN, así siempre hay "citas de hoy", citas pasadas
 --  (atendidas, canceladas, inasistencias) y citas futuras.
 --
---  Cuentas (contraseÃ±a Clinica2026* para todas):
+--  Cuentas (contraseña Clinica2026* para todas):
 --    admin         Administrador          (04_datos_iniciales.sql)
 --    recepcion     Recepcionista
---    dr.perez      MÃ©dico  Â· Dr. Juan PÃ©rez Rojas (Medicina General)
---    lucia.vargas  Paciente Â· LucÃ­a Vargas MontaÃ±o
+--    dr.perez      Médico  · Dr. Juan Pérez Rojas (Medicina General)
+--    lucia.vargas  Paciente · Lucía Vargas Montaño
 --
 --  Notas para las pruebas del examen (backend/tests/pruebas_sistema.php):
---    - El mÃ©dico 1 (Juan PÃ©rez, Medicina General = especialidad 1) atiende
+--    - El médico 1 (Juan Pérez, Medicina General = especialidad 1) atiende
 --      de lunes a viernes de 08:00 a 12:00 en citas de 30 min.
---    - NingÃºn feriado de prueba cae en lunes.
+--    - Ningún feriado de prueba cae en lunes.
 -- =====================================================================
 
 SET client_min_messages = warning;
--- Permite cargar citas pasadas (el trigger RN06 las rechazarÃ­a).
+-- Permite cargar citas pasadas (el trigger RN06 las rechazaría).
 SET app.carga_datos = 'si';
 DO $$ BEGIN PERFORM setseed(0.2026); END $$;
 
 -- ---------------------------------------------------------------------
---  MÃ©dicos (RF03) â€” el 6.Âº queda inactivo al final del script
+--  Médicos (RF03) — el 6.º queda inactivo al final del script
 -- ---------------------------------------------------------------------
 INSERT INTO medico (registro_profesional, nombres, apellidos, telefono, correo) VALUES
-    ('MP-SC-1021', 'Juan',          'PÃ©rez Rojas',           '70011001', 'juan.perez@vidasalud.bo'),
-    ('MP-SC-1187', 'MarÃ­a Fernanda','GutiÃ©rrez Soliz',       '70011002', 'maria.gutierrez@vidasalud.bo'),
-    ('MP-SC-0954', 'Carlos Alberto','MÃ©ndez Vaca',           '70011003', 'carlos.mendez@vidasalud.bo'),
-    ('MP-SC-1342', 'Ana LucÃ­a',     'Rivero SuÃ¡rez',         '70011004', 'ana.rivero@vidasalud.bo'),
-    ('MP-SC-1103', 'Roberto Daniel','ÃÃ±ez Justiniano',       '70011005', 'roberto.anez@vidasalud.bo'),
+    ('MP-SC-1021', 'Juan',          'Pérez Rojas',           '70011001', 'juan.perez@vidasalud.bo'),
+    ('MP-SC-1187', 'María Fernanda','Gutiérrez Soliz',       '70011002', 'maria.gutierrez@vidasalud.bo'),
+    ('MP-SC-0954', 'Carlos Alberto','Méndez Vaca',           '70011003', 'carlos.mendez@vidasalud.bo'),
+    ('MP-SC-1342', 'Ana Lucía',     'Rivero Suárez',         '70011004', 'ana.rivero@vidasalud.bo'),
+    ('MP-SC-1103', 'Roberto Daniel','Áñez Justiniano',       '70011005', 'roberto.anez@vidasalud.bo'),
     ('MP-SC-0876', 'Luis Fernando', 'Castro Ortiz',          '70011006', 'luis.castro@vidasalud.bo'),
     ('MP-SC-1450', 'Mauricio Javier','Soliz Antelo',         '70011007', 'mauricio.soliz@vidasalud.bo');
 
 INSERT INTO medico_especialidad (id_medico, id_especialidad) VALUES
-    (1, 1),            -- Juan PÃ©rez: Medicina General
-    (2, 1), (2, 2),    -- MarÃ­a Fernanda GutiÃ©rrez: Medicina General y PediatrÃ­a
-    (3, 3),            -- Carlos MÃ©ndez: CardiologÃ­a
-    (4, 4),            -- Ana LucÃ­a Rivero: GinecologÃ­a
-    (5, 5),            -- Roberto ÃÃ±ez: TraumatologÃ­a
-    (6, 2),            -- Luis Castro: PediatrÃ­a (inactivo)
-    (7, 6);            -- Mauricio Soliz: OdontologÃ­a
+    (1, 1),            -- Juan Pérez: Medicina General
+    (2, 1), (2, 2),    -- María Fernanda Gutiérrez: Medicina General y Pediatría
+    (3, 3),            -- Carlos Méndez: Cardiología
+    (4, 4),            -- Ana Lucía Rivero: Ginecología
+    (5, 5),            -- Roberto Áñez: Traumatología
+    (6, 2),            -- Luis Castro: Pediatría (inactivo)
+    (7, 6);            -- Mauricio Soliz: Odontología
 
 -- ---------------------------------------------------------------------
---  Horarios de atenciÃ³n (RF05) â€” dÃ­a 1 = lunes â€¦ 7 = domingo
+--  Horarios de atención (RF05) — día 1 = lunes … 7 = domingo
 -- ---------------------------------------------------------------------
 INSERT INTO horario_atencion (id_medico, dia_semana, hora_inicio, hora_fin, duracion_cita)
-SELECT 1, d, '08:00', '12:00', 30 FROM generate_series(1, 5) d;                -- Lunâ€“Vie maÃ±ana
+SELECT 1, d, '08:00', '12:00', 30 FROM generate_series(1, 5) d;                -- Lun–Vie mañana
 
 INSERT INTO horario_atencion (id_medico, dia_semana, hora_inicio, hora_fin, duracion_cita) VALUES
     (2, 1, '14:00', '18:00', 20), (2, 3, '14:00', '18:00', 20), (2, 5, '14:00', '18:00', 20),
@@ -895,10 +903,10 @@ INSERT INTO horario_atencion (id_medico, dia_semana, hora_inicio, hora_fin, dura
     (5, 1, '08:00', '13:00', 30), (5, 3, '08:00', '13:00', 30), (5, 5, '08:00', '13:00', 30),
     (5, 6, '09:00', '12:00', 30),
     (6, 2, '09:00', '12:00', 30), (6, 4, '09:00', '12:00', 30),
-    (7, 6, '08:00', '12:00', 30);                                               -- OdontologÃ­a: sÃ¡bado
+    (7, 6, '08:00', '12:00', 30);                                               -- Odontología: sábado
 
 INSERT INTO horario_atencion (id_medico, dia_semana, hora_inicio, hora_fin, duracion_cita)
-SELECT 7, d, '14:00', '18:00', 30 FROM generate_series(1, 5) d;                -- OdontologÃ­a: Lunâ€“Vie tarde
+SELECT 7, d, '14:00', '18:00', 30 FROM generate_series(1, 5) d;                -- Odontología: Lun–Vie tarde
 
 -- Un bloque desactivado (para mostrar que se puede activar/desactivar).
 INSERT INTO horario_atencion (id_medico, dia_semana, hora_inicio, hora_fin, duracion_cita, estado)
@@ -908,109 +916,109 @@ VALUES (3, 5, '15:00', '17:00', 30, 'inactivo');
 --  Feriados y ausencias (dia_no_laborable), nunca en lunes
 -- ---------------------------------------------------------------------
 INSERT INTO dia_no_laborable (fecha, id_medico, descripcion)
-SELECT min(d)::DATE, NULL::INT, 'Aniversario de la clÃ­nica (feriado de prueba)'
+SELECT min(d)::DATE, NULL::INT, 'Aniversario de la clínica (feriado de prueba)'
   FROM generate_series(CURRENT_DATE + 12, CURRENT_DATE + 18, INTERVAL '1 day') d
  WHERE EXTRACT(ISODOW FROM d) = 3;
 
 INSERT INTO dia_no_laborable (fecha, id_medico, descripcion)
-SELECT min(d)::DATE, 3, 'Congreso Nacional de CardiologÃ­a'
+SELECT min(d)::DATE, 3, 'Congreso Nacional de Cardiología'
   FROM generate_series(CURRENT_DATE + 3, CURRENT_DATE + 9, INTERVAL '1 day') d
  WHERE EXTRACT(ISODOW FROM d) = 4;
 
 INSERT INTO dia_no_laborable (fecha, id_medico, descripcion)
-SELECT min(d)::DATE, 5, 'CapacitaciÃ³n en el Hospital JaponÃ©s'
+SELECT min(d)::DATE, 5, 'Capacitación en el Hospital Japonés'
   FROM generate_series(CURRENT_DATE + 6, CURRENT_DATE + 12, INTERVAL '1 day') d
  WHERE EXTRACT(ISODOW FROM d) = 5;
 
 -- ---------------------------------------------------------------------
---  Pacientes (RF02) con informaciÃ³n mÃ©dica (punto 3.4)
+--  Pacientes (RF02) con información médica (punto 3.4)
 -- ---------------------------------------------------------------------
 INSERT INTO paciente (ci, nombres, apellidos, fecha_nacimiento, sexo, telefono, correo, direccion,
                       tipo_sangre, alergias, enfermedades_cronicas, medicamentos, antecedentes) VALUES
-    ('6234517',    'LucÃ­a',          'Vargas MontaÃ±o',      '1992-03-14', 'femenino',  '71234501', 'lucia.vargas@correo.com',   'Barrio Equipetrol, calle 7 Oeste #23',
-     'O+', 'Penicilina', NULL, NULL, 'ApendicectomÃ­a en 2015.'),
-    ('5893210',    'Jorge Luis',     'Salvatierra PeÃ±a',    '1978-11-02', 'masculino', '71234502', 'jorge.salvatierra@correo.com', 'Av. Banzer, 4.Âº anillo',
-     'A+', NULL, 'HipertensiÃ³n arterial', 'LosartÃ¡n 50 mg', 'Padre con cardiopatÃ­a.'),
-    ('7456123',    'Carla Andrea',   'SuÃ¡rez Rivero',       '1995-07-21', 'femenino',  '71234503', 'carla.suarez@correo.com',   'Urb. Las Palmas, calle 3',
+    ('6234517',    'Lucía',          'Vargas Montaño',      '1992-03-14', 'femenino',  '71234501', 'lucia.vargas@correo.com',   'Barrio Equipetrol, calle 7 Oeste #23',
+     'O+', 'Penicilina', NULL, NULL, 'Apendicectomía en 2015.'),
+    ('5893210',    'Jorge Luis',     'Salvatierra Peña',    '1978-11-02', 'masculino', '71234502', 'jorge.salvatierra@correo.com', 'Av. Banzer, 4.º anillo',
+     'A+', NULL, 'Hipertensión arterial', 'Losartán 50 mg', 'Padre con cardiopatía.'),
+    ('7456123',    'Carla Andrea',   'Suárez Rivero',       '1995-07-21', 'femenino',  '71234503', 'carla.suarez@correo.com',   'Urb. Las Palmas, calle 3',
      'B+', 'Mariscos', NULL, NULL, NULL),
     ('4321987',    'Pedro',          'Mamani Quispe',       '1965-01-30', 'masculino', '71234504', NULL,                        'Plan 3000, UV 160',
      'O+', NULL, 'Diabetes tipo 2', 'Metformina 850 mg', NULL),
     ('8123456',    'Valeria',        'Justiniano Roca',     '2001-09-05', 'femenino',  '71234505', 'valeria.justiniano@correo.com', 'Av. Alemana, 3.er anillo',
      'AB+', NULL, NULL, NULL, NULL),
-    ('9012345',    'Mateo',          'Rojas Aguilera',      '2016-04-18', 'masculino', '71234506', NULL,                        'Villa 1.Âº de Mayo',
+    ('9012345',    'Mateo',          'Rojas Aguilera',      '2016-04-18', 'masculino', '71234506', NULL,                        'Villa 1.º de Mayo',
      'A-', 'Ibuprofeno', 'Asma leve', 'Salbutamol inhalador', 'Prematuro de 35 semanas.'),
-    ('6789012',    'Gabriela',       'Ortiz CÃ©spedes',      '1988-12-11', 'femenino',  '71234507', 'gabriela.ortiz@correo.com', 'Barrio Sirari, calle Los Pinos',
-     'O-', NULL, NULL, NULL, 'Dos cesÃ¡reas.'),
-    ('5567890',    'Fernando',       'ChÃ¡vez Antelo',       '1970-06-25', 'masculino', '71234508', 'fernando.chavez@correo.com', 'Av. Santos Dumont, 5.Âº anillo',
+    ('6789012',    'Gabriela',       'Ortiz Céspedes',      '1988-12-11', 'femenino',  '71234507', 'gabriela.ortiz@correo.com', 'Barrio Sirari, calle Los Pinos',
+     'O-', NULL, NULL, NULL, 'Dos cesáreas.'),
+    ('5567890',    'Fernando',       'Chávez Antelo',       '1970-06-25', 'masculino', '71234508', 'fernando.chavez@correo.com', 'Av. Santos Dumont, 5.º anillo',
      'B-', NULL, 'Artrosis de rodilla', 'Paracetamol 500 mg', NULL),
-    ('7890123',    'Daniela',        'Paz Saucedo',         '1999-02-08', 'femenino',  '71234509', 'daniela.paz@correo.com',    'Urb. Villa BolÃ­var',
+    ('7890123',    'Daniela',        'Paz Saucedo',         '1999-02-08', 'femenino',  '71234509', 'daniela.paz@correo.com',    'Urb. Villa Bolívar',
      NULL, NULL, NULL, NULL, NULL),
-    ('3456789',    'Rosa MarÃ­a',     'Flores Vaca',         '1958-08-19', 'femenino',  '71234510', NULL,                        'Barrio Hamacas',
+    ('3456789',    'Rosa María',     'Flores Vaca',         '1958-08-19', 'femenino',  '71234510', NULL,                        'Barrio Hamacas',
      'A+', 'Sulfas', 'Hipotiroidismo', 'Levotiroxina 75 mcg', NULL),
-    ('9234567',    'SofÃ­a',          'MÃ©ndez Arteaga',      '2019-10-02', 'femenino',  '71234511', NULL,                        'Urb. La Colorada',
-     'O+', NULL, NULL, NULL, 'Vacunas al dÃ­a.'),
-    ('6345678',    'AndrÃ©s',         'GutiÃ©rrez LijerÃ³n',   '1985-05-15', 'masculino', '71234512', 'andres.gutierrez@correo.com', 'Av. Cristo Redentor, 6.Âº anillo',
+    ('9234567',    'Sofía',          'Méndez Arteaga',      '2019-10-02', 'femenino',  '71234511', NULL,                        'Urb. La Colorada',
+     'O+', NULL, NULL, NULL, 'Vacunas al día.'),
+    ('6345678',    'Andrés',         'Gutiérrez Lijerón',   '1985-05-15', 'masculino', '71234512', 'andres.gutierrez@correo.com', 'Av. Cristo Redentor, 6.º anillo',
      'A+', NULL, NULL, NULL, 'Fractura de tibia en 2020.'),
-    ('7123456-1B', 'Camila',         'Roca Vargas',         '1997-01-27', 'femenino',  '71234513', 'camila.roca@correo.com',    'Barrio UrbarÃ­',
+    ('7123456-1B', 'Camila',         'Roca Vargas',         '1997-01-27', 'femenino',  '71234513', 'camila.roca@correo.com',    'Barrio Urbarí',
      'B+', NULL, NULL, NULL, NULL),
-    ('4987654',    'Miguel Ãngel',   'Terrazas Rivas',      '1962-03-03', 'masculino', '71234514', NULL,                        'Av. Virgen de Cotoca',
+    ('4987654',    'Miguel Ángel',   'Terrazas Rivas',      '1962-03-03', 'masculino', '71234514', NULL,                        'Av. Virgen de Cotoca',
      'O+', NULL, 'Insuficiencia cardiaca', 'Enalapril 10 mg', 'Infarto en 2019.'),
     ('8456789',    'Paola',          'Aguilera Montero',    '1990-11-30', 'femenino',  '71234515', 'paola.aguilera@correo.com', 'Urb. Los Mangales',
-     'A-', 'LÃ¡tex', NULL, NULL, NULL),
+     'A-', 'Látex', NULL, NULL, NULL),
     ('6012345',    'Ricardo',        'Saucedo Ribera',      '1982-07-07', 'masculino', '71234516', 'ricardo.saucedo@correo.com', 'Barrio Polanco',
      NULL, NULL, NULL, NULL, NULL),
-    ('9345678',    'Isabella',       'PeÃ±a CoÃ­mbra',        '2012-06-12', 'femenino',  '71234517', NULL,                        'Av. ParaguÃ¡',
+    ('9345678',    'Isabella',       'Peña Coímbra',        '2012-06-12', 'femenino',  '71234517', NULL,                        'Av. Paraguá',
      'O+', NULL, NULL, NULL, NULL),
-    ('5234567',    'HÃ©ctor',         'Ribera Lino',         '1975-09-09', 'masculino', '71234518', NULL,                        'Barrio Lazareto',
-     'B+', NULL, 'Gastritis crÃ³nica', 'Omeprazol 20 mg', NULL),
-    ('7654321',    'Natalia',        'CuÃ©llar EgÃ¼ez',       '1993-04-04', 'femenino',  '71234519', 'natalia.cuellar@correo.com', 'Urb. Santa Rosita',
+    ('5234567',    'Héctor',         'Ribera Lino',         '1975-09-09', 'masculino', '71234518', NULL,                        'Barrio Lazareto',
+     'B+', NULL, 'Gastritis crónica', 'Omeprazol 20 mg', NULL),
+    ('7654321',    'Natalia',        'Cuéllar Egüez',       '1993-04-04', 'femenino',  '71234519', 'natalia.cuellar@correo.com', 'Urb. Santa Rosita',
      'AB-', NULL, NULL, NULL, NULL),
-    ('4123456',    'Oscar',          'Lino Moreno',         '1968-12-24', 'masculino', '71234520', NULL,                        'Barrio CupesÃ­',
+    ('4123456',    'Oscar',          'Lino Moreno',         '1968-12-24', 'masculino', '71234520', NULL,                        'Barrio Cupesí',
      'O+', NULL, NULL, NULL, NULL);
 
--- Fechas de registro escalonadas en los Ãºltimos meses (reporte "Pacientes registrados").
+-- Fechas de registro escalonadas en los últimos meses (reporte "Pacientes registrados").
 UPDATE paciente SET creado_en = localtimestamp - make_interval(days => (21 - id_paciente) * 6, hours => id_paciente);
 
--- Un paciente no quiere compartir su informaciÃ³n mÃ©dica con el mÃ©dico (preferencia de privacidad).
+-- Un paciente no quiere compartir su información médica con el médico (preferencia de privacidad).
 UPDATE paciente SET compartir_info_medica = FALSE WHERE id_paciente = 16;
 
 -- Contactos de emergencia
 INSERT INTO contacto_emergencia (id_paciente, nombre, parentesco, telefono) VALUES
-    (1,  'RaÃºl Vargas MontaÃ±o',      'Hermano', '72100001'),
-    (2,  'Elena PeÃ±a de Salvatierra','Esposa',  '72100002'),
+    (1,  'Raúl Vargas Montaño',      'Hermano', '72100001'),
+    (2,  'Elena Peña de Salvatierra','Esposa',  '72100002'),
     (4,  'Juana Quispe de Mamani',   'Esposa',  '72100004'),
     (6,  'Patricia Aguilera Rojas',  'Madre',   '72100006'),
     (10, 'Marcelo Flores Vaca',      'Hijo',    '72100010'),
-    (11, 'Diego MÃ©ndez Arteaga',     'Padre',   '72100011'),
+    (11, 'Diego Méndez Arteaga',     'Padre',   '72100011'),
     (14, 'Lourdes Rivas de Terrazas','Esposa',  '72100014'),
-    (17, 'MÃ³nica CoÃ­mbra PeÃ±a',      'Madre',   '72100017');
+    (17, 'Mónica Coímbra Peña',      'Madre',   '72100017');
 
 -- ---------------------------------------------------------------------
---  Usuarios de demostraciÃ³n (contraseÃ±a: Clinica2026*)
+--  Usuarios de demostración (contraseña: Clinica2026*)
 -- ---------------------------------------------------------------------
 INSERT INTO usuario (nombre_usuario, correo, password_hash, nombre_completo, id_rol, id_medico, id_paciente)
 SELECT 'recepcion', 'recepcion@vidasalud.bo', '$2y$10$0yRfD1926PtAtv1lHDF9Mu/Bw3qSrEWeqCXSkfeqbB6zYPxT3Q.2u',
        'Carla Ribera Justiniano', id_rol, NULL::INT, NULL::INT FROM rol WHERE nombre = 'recepcionista'
 UNION ALL
 SELECT 'dr.perez', 'juan.perez@vidasalud.bo', '$2y$10$0yRfD1926PtAtv1lHDF9Mu/Bw3qSrEWeqCXSkfeqbB6zYPxT3Q.2u',
-       'Dr. Juan PÃ©rez Rojas', id_rol, 1, NULL FROM rol WHERE nombre = 'medico'
+       'Dr. Juan Pérez Rojas', id_rol, 1, NULL FROM rol WHERE nombre = 'medico'
 UNION ALL
 SELECT 'lucia.vargas', 'lucia.vargas@correo.com', '$2y$10$0yRfD1926PtAtv1lHDF9Mu/Bw3qSrEWeqCXSkfeqbB6zYPxT3Q.2u',
-       'LucÃ­a Vargas MontaÃ±o', id_rol, NULL, 1 FROM rol WHERE nombre = 'paciente';
+       'Lucía Vargas Montaño', id_rol, NULL, 1 FROM rol WHERE nombre = 'paciente';
 
 -- ---------------------------------------------------------------------
---  Citas (cientos), generadas alrededor de la fecha de instalaciÃ³n
+--  Citas (cientos), generadas alrededor de la fecha de instalación
 -- ---------------------------------------------------------------------
 DO $$
 DECLARE
     v_recepcion INT := (SELECT id_usuario FROM usuario WHERE nombre_usuario = 'recepcion');
     v_portal    INT := (SELECT id_usuario FROM usuario WHERE nombre_usuario = 'lucia.vargas');
-    v_motivos   TEXT[] := ARRAY['Control de rutina', 'Dolor de cabeza frecuente', 'RevisiÃ³n de exÃ¡menes',
-                                'Control de presiÃ³n arterial', 'Malestar general y fiebre', 'Dolor de espalda',
+    v_motivos   TEXT[] := ARRAY['Control de rutina', 'Dolor de cabeza frecuente', 'Revisión de exámenes',
+                                'Control de presión arterial', 'Malestar general y fiebre', 'Dolor de espalda',
                                 'Chequeo anual', 'Seguimiento de tratamiento', 'Consulta por tos persistente',
-                                'Control prenatal', 'Dolor en la rodilla', 'Certificado mÃ©dico', NULL, NULL];
-    v_cancelar  TEXT[] := ARRAY['El paciente avisÃ³ que no podrÃ¡ asistir', 'Viaje imprevisto del paciente',
-                                'El paciente pidiÃ³ otra fecha', 'Problemas de transporte', 'Se sintiÃ³ mejor y no requiere la consulta'];
+                                'Control prenatal', 'Dolor en la rodilla', 'Certificado médico', NULL, NULL];
+    v_cancelar  TEXT[] := ARRAY['El paciente avisó que no podrá asistir', 'Viaje imprevisto del paciente',
+                                'El paciente pidió otra fecha', 'Problemas de transporte', 'Se sintió mejor y no requiere la consulta'];
     v_dia     DATE;
     v_slot    RECORD;
     v_prob    NUMERIC;
@@ -1020,7 +1028,7 @@ DECLARE
     v_r       NUMERIC;
     v_inicio  TIMESTAMP;
 BEGIN
-    -- 1. Citas fijas de la paciente de demostraciÃ³n (recordatorios de las prÃ³ximas 48 h).
+    -- 1. Citas fijas de la paciente de demostración (recordatorios de las próximas 48 h).
     FOR v_slot IN
         SELECT d::DATE AS fecha, m.id_medico, i.hora_inicio, i.hora_fin
           FROM generate_series(CURRENT_DATE, CURRENT_DATE + 2, INTERVAL '1 day') d
@@ -1043,10 +1051,10 @@ BEGIN
         INSERT INTO cita (id_paciente, id_medico, id_especialidad, fecha, hora_inicio, hora_fin, modalidad, motivo,
                           id_usuario_registro, creado_en)
         VALUES (1, 3, 3, v_slot.fecha, v_slot.hora_inicio, v_slot.hora_fin, 'virtual',
-                'RevisiÃ³n de electrocardiograma', v_portal, localtimestamp - INTERVAL '1 day');
+                'Revisión de electrocardiograma', v_portal, localtimestamp - INTERVAL '1 day');
     END LOOP;
 
-    -- 2. Citas aleatorias: 45 dÃ­as atrÃ¡s hasta 21 dÃ­as adelante.
+    -- 2. Citas aleatorias: 45 días atrás hasta 21 días adelante.
     FOR v_dia IN SELECT generate_series(CURRENT_DATE - 45, CURRENT_DATE + 21, INTERVAL '1 day')::DATE LOOP
         v_prob := CASE
                       WHEN v_dia < CURRENT_DATE      THEN 0.38
@@ -1087,7 +1095,7 @@ BEGIN
                                                                     hours => floor(random() * 8)::INT))
             RETURNING id_cita, fecha, hora_fin INTO v_cita;
 
-            -- Estado segÃºn si la cita ya pasÃ³ (RF10).
+            -- Estado según si la cita ya pasó (RF10).
             v_r := random();
             IF v_dia + v_slot.hora_fin <= localtimestamp THEN
                 IF v_r < 0.72 THEN
@@ -1108,7 +1116,7 @@ BEGIN
                     UPDATE cita SET estado = 'confirmada' WHERE id_cita = v_cita.id_cita;
                 END IF;
             ELSE
-                -- En curso ahora mismo: el paciente ya llegÃ³.
+                -- En curso ahora mismo: el paciente ya llegó.
                 UPDATE cita SET estado = 'confirmada' WHERE id_cita = v_cita.id_cita;
             END IF;
         END LOOP;
@@ -1131,8 +1139,8 @@ UPDATE cita_historial h
                     END,
        detalle = COALESCE(h.detalle, CASE h.estado_nuevo
                                          WHEN 'atendida' THEN 'Consulta realizada'
-                                         WHEN 'inasistencia' THEN 'El paciente no se presentÃ³'
-                                         WHEN 'confirmada' THEN 'El paciente confirmÃ³ su asistencia'
+                                         WHEN 'inasistencia' THEN 'El paciente no se presentó'
+                                         WHEN 'confirmada' THEN 'El paciente confirmó su asistencia'
                                      END),
        id_usuario = (SELECT id_usuario FROM usuario WHERE nombre_usuario =
                         CASE WHEN h.estado_nuevo = 'atendida' AND c.id_medico = 1 THEN 'dr.perez' ELSE 'recepcion' END)
@@ -1140,19 +1148,19 @@ UPDATE cita_historial h
  WHERE c.id_cita = h.id_cita AND h.accion = 'estado';
 
 -- ---------------------------------------------------------------------
---  El Dr. Luis Castro deja la clÃ­nica: sus citas futuras se cancelan
+--  El Dr. Luis Castro deja la clínica: sus citas futuras se cancelan
 --  (quedan en el historial) y queda INACTIVO (RN04, RN11).
 -- ---------------------------------------------------------------------
-UPDATE cita SET estado = 'cancelada', motivo_cancelacion = 'El mÃ©dico fue dado de baja en la clÃ­nica'
+UPDATE cita SET estado = 'cancelada', motivo_cancelacion = 'El médico fue dado de baja en la clínica'
  WHERE id_medico = 6 AND estado IN ('programada', 'confirmada');
 UPDATE medico SET estado = 'inactivo' WHERE id_medico = 6;
 
 -- Un paciente inactivo (se conserva su historial).
-UPDATE cita SET estado = 'cancelada', motivo_cancelacion = 'Paciente desactivado por la clÃ­nica'
+UPDATE cita SET estado = 'cancelada', motivo_cancelacion = 'Paciente desactivado por la clínica'
  WHERE id_paciente = 20 AND estado IN ('programada', 'confirmada');
 UPDATE paciente SET estado = 'inactivo' WHERE id_paciente = 20;
 
--- Primeros registros de la bitÃ¡cora.
+-- Primeros registros de la bitácora.
 INSERT INTO bitacora (id_usuario, usuario, accion, modulo, detalle, ip)
 SELECT id_usuario, nombre_usuario, 'instalacion', 'sistema', 'Base de datos instalada con datos de prueba.', '127.0.0.1'
   FROM usuario WHERE nombre_usuario = 'admin';
@@ -1166,6 +1174,8 @@ SELECT (SELECT count(*) FROM medico)   AS medicos,
        (SELECT count(*) FROM cita)     AS citas,
        (SELECT count(*) FROM cita WHERE fecha = CURRENT_DATE) AS citas_hoy;
 
+
+
 -- Soporte para bloqueo progresivo y recuperacion de contrasena
 ALTER TABLE usuario ADD COLUMN IF NOT EXISTS bloqueos_consecutivos SMALLINT NOT NULL DEFAULT 0;
 
@@ -1178,4 +1188,3 @@ CREATE TABLE IF NOT EXISTS recuperacion_clave (
     creado_en       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ix_recuperacion_token ON recuperacion_clave (token_hash);
-
