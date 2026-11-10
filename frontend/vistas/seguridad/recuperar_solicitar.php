@@ -19,3 +19,4 @@
 </form>
 
 <p class="acceso-enlace"><a href="<?= url('/login') ?>">← Volver a Iniciar sesión</a></p>
+

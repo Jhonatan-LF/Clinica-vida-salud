@@ -40,6 +40,19 @@ $config = [
         'dias_maximos_reserva'          => 60, // hasta cuántos días adelante se reserva
         'horas_minimas_cancelar_portal' => 2,  // el paciente cancela con 2 h de anticipación
     ],
+
+    // Configuración para el envío de correos (recuperación de contraseña, notificaciones)
+    // Puede usar 'smtp' (Gmail, Resend, Brevo, Mailtrap, etc.) o 'mail' (PHP nativo)
+    'correo' => [
+        'driver'      => getenv('MAIL_DRIVER') ?: ($_ENV['MAIL_DRIVER'] ?? 'smtp'),
+        'host'        => getenv('MAIL_HOST') ?: ($_ENV['MAIL_HOST'] ?? 'smtp.gmail.com'),
+        'puerto'      => (int) (getenv('MAIL_PORT') ?: ($_ENV['MAIL_PORT'] ?? 587)),
+        'seguridad'   => getenv('MAIL_ENCRYPTION') ?: ($_ENV['MAIL_ENCRYPTION'] ?? 'tls'), // 'tls' o 'ssl'
+        'usuario'     => getenv('MAIL_USERNAME') ?: ($_ENV['MAIL_USERNAME'] ?? ''),
+        'clave'       => getenv('MAIL_PASSWORD') ?: ($_ENV['MAIL_PASSWORD'] ?? ''),
+        'remitente'   => getenv('MAIL_FROM_ADDRESS') ?: ($_ENV['MAIL_FROM_ADDRESS'] ?? 'no-reply@clinicavidasalud.com'),
+        'nombre_from' => getenv('MAIL_FROM_NAME') ?: ($_ENV['MAIL_FROM_NAME'] ?? 'Clínica Vida Salud'),
+    ],
 ];
 
 $local = __DIR__ . '/config.local.php';

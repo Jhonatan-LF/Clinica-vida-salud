@@ -17,7 +17,7 @@
             <input type="password" id="clave" name="clave" autocomplete="new-password" required maxlength="64" autofocus>
             <button type="button" class="ver-clave" data-ver-clave="clave" aria-label="Mostrar contraseña"><?= icono('ojo') ?></button>
         </div>
-        <p class="pista">Mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número.</p>
+        <p class="pista">Mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial (ej: !@#$*).</p>
         <?= error_campo($errores, 'clave') ?>
     </div>
 
@@ -34,3 +34,4 @@
 </form>
 
 <p class="acceso-enlace"><a href="<?= url('/login') ?>">← Cancelar y volver al inicio</a></p>
+

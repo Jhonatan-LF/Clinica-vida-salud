@@ -180,7 +180,12 @@
 
         const regla = campo.dataset.regla;
         if (regla === 'clave') {
-            if (valor.length < 8 || !/[A-Za-z]/.test(valor) || !/\d/.test(valor)) return 'De 8 a 64 caracteres, con letras y números.';
+            const valida = valor.length >= 8 && valor.length <= 64
+                && /[A-Z]/.test(valor)
+                && /[a-z]/.test(valor)
+                && /\d/.test(valor)
+                && /[^A-Za-z0-9]/.test(valor);
+            if (!valida) return 'Mínimo 8 caracteres, con 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial (ej. !@#$*).';
         } else if (regla && REGLAS[regla] && !REGLAS[regla][0].test(regla === 'ci' ? valor.replace(/\s/g, '') : valor)) {
             return REGLAS[regla][1];
         }

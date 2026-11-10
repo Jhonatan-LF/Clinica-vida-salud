@@ -2,37 +2,146 @@
 namespace App\Nucleo;
 
 /**
- * Servicio de envío y simulación de correos electrónicos.
- *
- * Si PHP tiene configurado un servidor de correo (o sendmail/SMTP), intenta enviar el correo.
- * Adicionalmente, guarda una copia en backend/storage/correos/ para que en localhost
- * o entornos de prueba se pueda inspeccionar el correo y hacer clic en el enlace directamente.
+ * Cliente de correo electrónico robusto y autónomo (sin dependencias externas).
+ * Soporta SMTP autenticado con TLS/SSL (Gmail, Outlook, Brevo, Mailtrap, etc.)
+ * y fallback con copia local en backend/storage/correos/ para trazabilidad.
  */
 final class Correo
 {
     public static function enviar(string $para, string $asunto, string $mensajeHtml, string $mensajeTexto = ''): bool
     {
-        $de = (string) Aplicacion::config('correo.remitente', 'no-responder@clinicavidasalud.com');
-        $nombreDe = (string) Aplicacion::config('app.nombre', 'Clínica Vida Salud');
+        $driver    = (string) Aplicacion::config('correo.driver', 'smtp');
+        $remitente = (string) Aplicacion::config('correo.remitente', 'no-reply@clinicavidasalud.com');
+        $nombreDe  = (string) Aplicacion::config('correo.nombre_from', 'Clínica Vida Salud');
 
-        // 1. Guardar siempre copia en storage/correos/ para desarrollo/pruebas locales
-        self::guardarCopiaLocal($para, $asunto, $mensajeHtml, $mensajeTexto);
+        // Siempre dejamos una copia local para auditoría y desarrollo
+        self::guardarCopiaLocal($para, $asunto, $mensajeHtml);
 
-        // 2. Intentar envío con mail() estándar si el entorno lo permite
+        if ($driver === 'smtp') {
+            $host   = (string) Aplicacion::config('correo.host', '');
+            $user   = (string) Aplicacion::config('correo.usuario', '');
+            $pass   = (string) Aplicacion::config('correo.clave', '');
+            $puerto = (int) Aplicacion::config('correo.puerto', 587);
+            $cifrado= (string) Aplicacion::config('correo.seguridad', 'tls');
+
+            // Si hay credenciales SMTP configuradas, enviamos vía socket SMTP
+            if ($host !== '' && $user !== '' && $pass !== '') {
+                try {
+                    return self::enviarPorSmtp($host, $puerto, $cifrado, $user, $pass, $remitente, $nombreDe, $para, $asunto, $mensajeHtml);
+                } catch (\Throwable $e) {
+                    error_log('Error enviando correo SMTP: ' . $e->getMessage());
+                }
+            }
+        }
+
+        // Fallback a mail() de PHP
         $headers  = "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $headers .= "From: =?UTF-8?B?" . base64_encode($nombreDe) . "?= <{$de}>\r\n";
+        $headers .= "From: =?UTF-8?B?" . base64_encode($nombreDe) . "?= <{$remitente}>\r\n";
         $headers .= "X-Mailer: ClinicaVidaSalud/1.0\r\n";
 
-        // Suprimimos errores en caso de que sendmail no esté configurado en localhost
         try {
             return @mail($para, "=?UTF-8?B?" . base64_encode($asunto) . "?=", $mensajeHtml, $headers);
         } catch (\Throwable) {
-            return true; // Consideramos exitoso para el flujo si quedó registrado localmente
+            return true;
         }
     }
 
-    private static function guardarCopiaLocal(string $para, string $asunto, string $html, string $texto): void
+    /**
+     * Envío directo vía socket SMTP con soporte STARTTLS y AUTH LOGIN.
+     */
+    private static function enviarPorSmtp(
+        string $host,
+        int $puerto,
+        string $cifrado,
+        string $usuario,
+        string $clave,
+        string $remitente,
+        string $nombreRemitente,
+        string $destinatario,
+        string $asunto,
+        string $cuerpoHtml
+    ): bool {
+        $prefijo = ($cifrado === 'ssl') ? 'ssl://' : '';
+        $socket = @fsockopen($prefijo . $host, $puerto, $errno, $errstr, 15);
+        if (!$socket) {
+            throw new \RuntimeException("No se pudo conectar al servidor SMTP {$host}:{$puerto} ($errstr)");
+        }
+
+        self::leerRespuestaSmtp($socket, 220);
+
+        // Saludo EHLO
+        $localHost = $_SERVER['SERVER_NAME'] ?? 'localhost';
+        self::ejecutarComandoSmtp($socket, "EHLO {$localHost}", 250);
+
+        // Negociar STARTTLS si está indicado
+        if ($cifrado === 'tls') {
+            self::ejecutarComandoSmtp($socket, "STARTTLS", 220);
+            $crypto = stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+            if (!$crypto) {
+                throw new \RuntimeException("Fallo al establecer cifrado TLS con el servidor SMTP.");
+            }
+            self::ejecutarComandoSmtp($socket, "EHLO {$localHost}", 250);
+        }
+
+        // Autenticación AUTH LOGIN
+        self::ejecutarComandoSmtp($socket, "AUTH LOGIN", 334);
+        self::ejecutarComandoSmtp($socket, base64_encode($usuario), 334);
+        self::ejecutarComandoSmtp($socket, base64_encode($clave), 235);
+
+        // Envío de remitente y destinatario
+        self::ejecutarComandoSmtp($socket, "MAIL FROM:<{$remitente}>", 250);
+        self::ejecutarComandoSmtp($socket, "RCPT TO:<{$destinatario}>", 250);
+
+        // Cabeceras y cuerpo
+        self::ejecutarComandoSmtp($socket, "DATA", 354);
+
+        $asuntoEncoded = "=?UTF-8?B?" . base64_encode($asunto) . "?=";
+        $fromEncoded   = "=?UTF-8?B?" . base64_encode($nombreRemitente) . "?=";
+
+        $email = "Date: " . date('r') . "\r\n";
+        $email .= "To: <{$destinatario}>\r\n";
+        $email .= "From: {$fromEncoded} <{$remitente}>\r\n";
+        $email .= "Subject: {$asuntoEncoded}\r\n";
+        $email .= "MIME-Version: 1.0\r\n";
+        $email .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $email .= "Content-Transfer-Encoding: base64\r\n\r\n";
+        $email .= chunk_split(base64_encode($cuerpoHtml)) . "\r\n.\r\n";
+
+        fwrite($socket, $email);
+        self::leerRespuestaSmtp($socket, 250);
+
+        // Desconexión
+        self::ejecutarComandoSmtp($socket, "QUIT", 221);
+        fclose($socket);
+
+        return true;
+    }
+
+    private static function ejecutarComandoSmtp($socket, string $comando, int $codigoEsperado): string
+    {
+        fwrite($socket, $comando . "\r\n");
+        return self::leerRespuestaSmtp($socket, $codigoEsperado);
+    }
+
+    private static function leerRespuestaSmtp($socket, int $codigoEsperado): string
+    {
+        $respuesta = '';
+        while ($linea = fgets($socket, 515)) {
+            $respuesta .= $linea;
+            // La última línea de respuesta SMTP tiene un espacio tras el código (ej: "250 OK")
+            if (isset($linea[3]) && $linea[3] === ' ') {
+                break;
+            }
+        }
+        $codigo = (int) substr($respuesta, 0, 3);
+        if ($codigo !== $codigoEsperado) {
+            throw new \RuntimeException("Respuesta SMTP inesperada: {$respuesta} (esperado {$codigoEsperado})");
+        }
+        return $respuesta;
+    }
+
+    private static function guardarCopiaLocal(string $para, string $asunto, string $html): void
     {
         $dir = dirname(__DIR__, 2) . '/storage/correos';
         if (!is_dir($dir)) {

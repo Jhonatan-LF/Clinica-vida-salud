@@ -5,7 +5,7 @@
  */
 $campos = [
     ['clave_actual', 'Contraseña actual', 'current-password', ''],
-    ['clave', 'Nueva contraseña', 'new-password', 'De 8 a 64 caracteres, con letras y números.'],
+    ['clave', 'Nueva contraseña', 'new-password', 'Mínimo 8 caracteres, con 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial (ej. !@#$*).'],
     ['clave_confirmacion', 'Repita la nueva contraseña', 'new-password', ''],
 ];
 ?>
