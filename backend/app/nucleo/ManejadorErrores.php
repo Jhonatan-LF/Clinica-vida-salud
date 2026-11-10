@@ -76,7 +76,9 @@ final class ManejadorErrores
     private static function registrarYGenerico(Throwable $e): ErrorNegocio
     {
         self::escribirLog($e);
-        return new ErrorNegocio('Ocurrió un problema interno. Intente nuevamente o avise al administrador.');
+        $depurar = (bool) Aplicacion::config('app.depuracion', false);
+        $msg = $depurar ? '[' . get_class($e) . '] ' . $e->getMessage() : 'Ocurrió un problema interno. Intente nuevamente o avise al administrador.';
+        return new ErrorNegocio($msg);
     }
 
     public static function escribirLog(Throwable $e): void
