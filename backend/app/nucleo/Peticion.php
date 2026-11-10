@@ -40,6 +40,16 @@ final class Peticion
         return $base;
     }
 
+    /** Retorna el esquema y host actual (ej: https://midominio.com o http://localhost:8000) */
+    public static function origen(): string
+    {
+        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $esquema = $https ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        return "{$esquema}://{$host}";
+    }
+
     /** Valor de $_POST o $_GET recortado; null si no viene o está vacío. */
     public static function entrada(string $clave, mixed $porDefecto = null): mixed
     {

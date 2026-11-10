@@ -16,7 +16,10 @@
         <?= error_campo($errores, 'usuario') ?>
     </div>
     <div class="campo<?= clase_error($errores, 'clave') ?>">
-        <label for="clave">Contraseña</label>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <label for="clave">Contraseña</label>
+            <a href="<?= url('/recuperar-clave') ?>" style="font-size: 0.82rem; color: var(--primario); text-decoration: none;">¿Olvidó su contraseña?</a>
+        </div>
         <div class="campo-clave">
             <input type="password" id="clave" name="clave" autocomplete="current-password" required maxlength="64">
             <button type="button" class="ver-clave" data-ver-clave="clave" aria-label="Mostrar contraseña"><?= icono('ojo') ?></button>

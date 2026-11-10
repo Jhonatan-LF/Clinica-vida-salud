@@ -32,8 +32,8 @@ $config = [
     ],
 
     'seguridad' => [
-        'max_intentos'    => 5,        // intentos fallidos antes de bloquear
-        'minutos_bloqueo' => 15,
+        'max_intentos'        => 3,    // intentos fallidos antes de bloquear (RF01)
+        'minutos_bloqueo_base'=> 1,    // 1er bloqueo: 1 min, 2do: 2 min, sucesivos: 4, 8, etc.
     ],
 
     'citas' => [

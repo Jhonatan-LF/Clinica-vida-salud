@@ -28,29 +28,51 @@ final class UsuarioModelo
         );
     }
 
-    /** Suma un intento fallido; al llegar al máximo bloquea la cuenta unos minutos. */
-    /** @return bool true si con este intento la cuenta quedó bloqueada */
-    public function registrarIntentoFallido(int $id): bool
+    /**
+     * Suma un intento fallido.
+     * Al llegar a max_intentos (3), bloquea progresivamente:
+     * 1er bloqueo = 1 min, 2do bloqueo = 2 min, 3er bloqueo = 4 min, etc. (exponencial).
+     * @return array{bloqueado:bool, minutos:int, intentos:int}
+     */
+    public function registrarIntentoFallido(int $id): array
     {
-        return (bool) BaseDatos::valor(
+        $max = (int) Aplicacion::config('seguridad.max_intentos', 3);
+        $baseMin = (int) Aplicacion::config('seguridad.minutos_bloqueo_base', 1);
+
+        $fila = BaseDatos::uno(
             "UPDATE usuario
                 SET intentos_fallidos = CASE WHEN intentos_fallidos + 1 >= :max THEN 0 ELSE intentos_fallidos + 1 END,
-                    bloqueado_hasta   = CASE WHEN intentos_fallidos + 1 >= :max
-                                             THEN now() + make_interval(mins => :min) ELSE bloqueado_hasta END
+                    bloqueos_consecutivos = CASE WHEN intentos_fallidos + 1 >= :max
+                                                 THEN bloqueos_consecutivos + 1 ELSE bloqueos_consecutivos END,
+                    bloqueado_hasta = CASE WHEN intentos_fallidos + 1 >= :max
+                                           THEN now() + make_interval(mins => LEAST(60, :base * POWER(2, GREATEST(0, bloqueos_consecutivos))::INT))
+                                           ELSE bloqueado_hasta END
               WHERE id_usuario = :id
-          RETURNING bloqueado_hasta IS NOT NULL AND bloqueado_hasta > now()",
+          RETURNING bloqueado_hasta IS NOT NULL AND bloqueado_hasta > now() AS esta_bloqueado,
+                    intentos_fallidos,
+                    CEIL(EXTRACT(EPOCH FROM (bloqueado_hasta - now())) / 60) AS minutos_restantes",
             [
-                'id'  => $id,
-                'max' => (int) Aplicacion::config('seguridad.max_intentos', 5),
-                'min' => (int) Aplicacion::config('seguridad.minutos_bloqueo', 15),
+                'id'   => $id,
+                'max'  => $max,
+                'base' => $baseMin,
             ]
         );
+
+        return [
+            'bloqueado' => !empty($fila['esta_bloqueado']),
+            'minutos'   => max(1, (int) ($fila['minutos_restantes'] ?? 1)),
+            'intentos'  => (int) ($fila['intentos_fallidos'] ?? 0),
+        ];
     }
 
     public function registrarAccesoExitoso(int $id): void
     {
         BaseDatos::ejecutar(
-            "UPDATE usuario SET intentos_fallidos = 0, bloqueado_hasta = NULL, ultimo_acceso = now()
+            "UPDATE usuario
+                SET intentos_fallidos = 0,
+                    bloqueos_consecutivos = 0,
+                    bloqueado_hasta = NULL,
+                    ultimo_acceso = now()
               WHERE id_usuario = :id",
             ['id' => $id]
         );
@@ -140,8 +162,71 @@ final class UsuarioModelo
     public function cambiarClave(int $id, string $hash): void
     {
         BaseDatos::ejecutar(
-            "UPDATE usuario SET password_hash = :h, intentos_fallidos = 0, bloqueado_hasta = NULL WHERE id_usuario = :id",
+            "UPDATE usuario
+                SET password_hash = :h,
+                    intentos_fallidos = 0,
+                    bloqueos_consecutivos = 0,
+                    bloqueado_hasta = NULL
+              WHERE id_usuario = :id",
             ['id' => $id, 'h' => $hash]
+        );
+    }
+
+    /** Busca una cuenta activa por su dirección exacta de correo. */
+    public function buscarPorCorreo(string $correo): ?array
+    {
+        return BaseDatos::uno(
+            "SELECT u.id_usuario, u.nombre_usuario, u.nombre_completo, u.correo, u.estado
+               FROM usuario u
+              WHERE LOWER(u.correo) = :c",
+            ['c' => mb_strtolower(trim($correo))]
+        );
+    }
+
+    /** Genera y guarda un token de recuperación que vence en 30 minutos. */
+    public function crearTokenRecuperacion(int $idUsuario): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $token);
+
+        // Invalida tokens anteriores no usados
+        BaseDatos::ejecutar(
+            "UPDATE recuperacion_clave
+                SET usado_en = now()
+              WHERE id_usuario = :id AND usado_en IS NULL",
+            ['id' => $idUsuario]
+        );
+
+        BaseDatos::ejecutar(
+            "INSERT INTO recuperacion_clave (id_usuario, token_hash, expira_en)
+             VALUES (:id, :hash, now() + interval '30 minutes')",
+            ['id' => $idUsuario, 'hash' => $tokenHash]
+        );
+
+        return $token;
+    }
+
+    /** Valida el token y retorna los datos del usuario si es vigente. */
+    public function verificarTokenRecuperacion(string $token): ?array
+    {
+        $tokenHash = hash('sha256', $token);
+        return BaseDatos::uno(
+            "SELECT r.id_recuperacion, r.id_usuario, u.nombre_usuario, u.nombre_completo, u.correo, u.estado
+               FROM recuperacion_clave r
+               JOIN usuario u ON u.id_usuario = r.id_usuario
+              WHERE r.token_hash = :hash
+                AND r.usado_en IS NULL
+                AND r.expira_en > now()",
+            ['hash' => $tokenHash]
+        );
+    }
+
+    /** Marca el token como usado. */
+    public function marcarTokenUsado(int $idRecuperacion): void
+    {
+        BaseDatos::ejecutar(
+            "UPDATE recuperacion_clave SET usado_en = now() WHERE id_recuperacion = :id",
+            ['id' => $idRecuperacion]
         );
     }
 
