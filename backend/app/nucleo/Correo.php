@@ -17,22 +17,24 @@ final class Correo
         // Siempre dejamos una copia local para auditoría y desarrollo
         self::guardarCopiaLocal($para, $asunto, $mensajeHtml);
 
-        if ($driver === 'smtp') {
-            $host   = (string) Aplicacion::config('correo.host', '');
-            $user   = (string) Aplicacion::config('correo.usuario', '');
-            $pass   = str_replace(' ', '', (string) Aplicacion::config('correo.clave', ''));
-            $puerto = (int) Aplicacion::config('correo.puerto', 587);
-            $cifrado= (string) Aplicacion::config('correo.seguridad', 'tls');
+        $host   = (string) Aplicacion::config('correo.host', '');
+        $user   = (string) Aplicacion::config('correo.usuario', '');
+        $pass   = str_replace(' ', '', (string) Aplicacion::config('correo.clave', ''));
+        $puerto = (int) Aplicacion::config('correo.puerto', 587);
+        $cifrado= (string) Aplicacion::config('correo.seguridad', 'tls');
 
-            // Si hay credenciales SMTP configuradas, enviamos vía socket SMTP
-            if ($host !== '' && $user !== '' && $pass !== '') {
-                try {
-                    return self::enviarPorSmtp($host, $puerto, $cifrado, $user, $pass, $remitente, $nombreDe, $para, $asunto, $mensajeHtml);
-                } catch (\Throwable $e) {
-                    error_log('Error enviando correo SMTP: ' . $e->getMessage());
-                    // Lanzar la excepción si estamos en producción para no silenciar el fallo
-                    throw $e;
-                }
+        // Si tenemos clave de Brevo (empieza con xsmtpib- o xkeysib-), usamos la API HTTP REST
+        // porque Railway BLOQUEA los puertos SMTP 587 y 465 en planes Hobby/Trial por firewall.
+        if (str_starts_with($pass, 'xsmtpib-') || str_starts_with($pass, 'xkeysib-') || str_contains($host, 'brevo')) {
+            return self::enviarPorApiBrevo($pass, $remitente, $nombreDe, $para, $asunto, $mensajeHtml);
+        }
+
+        if ($driver === 'smtp' && $host !== '' && $user !== '' && $pass !== '') {
+            try {
+                return self::enviarPorSmtp($host, $puerto, $cifrado, $user, $pass, $remitente, $nombreDe, $para, $asunto, $mensajeHtml);
+            } catch (\Throwable $e) {
+                error_log('Error enviando correo SMTP: ' . $e->getMessage());
+                throw $e;
             }
         }
 
@@ -47,6 +49,63 @@ final class Correo
         } catch (\Throwable) {
             return true;
         }
+    }
+
+    /**
+     * Envío a través de la API REST de Brevo sobre HTTPS (Puerto 443).
+     * Railway NO bloquea HTTPS, garantizando entrega al 100%.
+     */
+    private static function enviarPorApiBrevo(
+        string $apiKey,
+        string $remitente,
+        string $nombreRemitente,
+        string $destinatario,
+        string $asunto,
+        string $cuerpoHtml
+    ): bool {
+        $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+        $payload = json_encode([
+            'sender' => [
+                'name'  => $nombreRemitente,
+                'email' => $remitente,
+            ],
+            'to' => [
+                [
+                    'email' => $destinatario,
+                ],
+            ],
+            'subject'     => $asunto,
+            'htmlContent' => $cuerpoHtml,
+        ]);
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_HTTPHEADER     => [
+                'accept: application/json',
+                'api-key: ' . $apiKey,
+                'content-type: application/json',
+            ],
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+
+        $response = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($error) {
+            throw new \RuntimeException("Fallo al conectar con la API de Brevo: {$error}");
+        }
+
+        if ($code !== 200 && $code !== 201) {
+            $data = json_decode((string) $response, true);
+            $msg = $data['message'] ?? $response;
+            throw new \RuntimeException("Brevo API error ({$code}): {$msg}");
+        }
+
+        return true;
     }
 
     /**
