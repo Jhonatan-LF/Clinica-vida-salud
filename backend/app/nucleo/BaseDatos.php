@@ -21,7 +21,22 @@ final class BaseDatos
     {
         if (self::$pdo === null) {
             $c = Aplicacion::config('bd');
-            $ssl = !empty($c['sslmode']) ? ';sslmode=' . $c['sslmode'] : ($c['host'] !== '127.0.0.1' && $c['host'] !== 'localhost' ? ';sslmode=require' : '');
+
+            // En la red interna de Railway o contenedores Docker en la misma red privada,
+            // sslmode no es requerido o puede fallar si el certificado no es confiable.
+            $esRedInterna = str_contains($c['host'], '.internal')
+                || str_starts_with($c['host'], '10.')
+                || str_starts_with($c['host'], '172.')
+                || str_starts_with($c['host'], '192.168.');
+
+            if (!empty($c['sslmode'])) {
+                $ssl = ';sslmode=' . $c['sslmode'];
+            } elseif ($c['host'] === '127.0.0.1' || $c['host'] === 'localhost' || $esRedInterna) {
+                $ssl = ';sslmode=disable';
+            } else {
+                $ssl = ';sslmode=require';
+            }
+
             $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s%s', $c['host'], $c['puerto'], $c['nombre'], $ssl);
             self::$pdo = new PDO($dsn, $c['usuario'], $c['clave'], [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
